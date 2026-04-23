@@ -3,7 +3,7 @@
   "version": "0.0.1",
   "private": true,
   "scripts": {
-    "prebuild": "pnpm --filter @tracmer-app/database exec prisma generate",
+    "prebuild": "node ../../scripts/vercel-migrate-if-needed.mjs && pnpm --filter @tracmer-app/database exec prisma generate",
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
