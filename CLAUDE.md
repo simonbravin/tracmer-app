@@ -49,7 +49,7 @@ Este repo es **tracmer-app**: control **administrativo-financiero** (ventas fact
 
 ## 6. Reglas de permisos
 
-- **Clerk** autentica; la **app** autoriza (membresía + matriz: módulos habilitados por rol + acciones por módulo, persistido — ver ERD §2.5).  
+- **Auth.js** autentica; la **app** autoriza (membresía + matriz: módulos habilitados por rol + acciones por módulo, persistido — ver ERD §2.5).  
 - **Un solo `owner`** por organización.  
 - La evaluación efectiva de permisos es en **servidor** en cada operación sensible.
 

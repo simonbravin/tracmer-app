@@ -1,6 +1,6 @@
 # `@tracmer-app/web`
 
-App Next.js (App Router) de **tracmer-app**: shell, tema claro/oscuro, navegación base y rutas placeholder. Auth con **Clerk**; sincronía del usuario a Postgres vía **Prisma** (paquete `@tracmer-app/database`).
+App Next.js (App Router) de **tracmer-app**: shell, tema claro/oscuro, navegación base y rutas placeholder. Auth con **Auth.js (NextAuth v5)** + **Prisma** (`@tracmer-app/database`): Google opcional, correo+contraseña, recuperación de contraseña vía Resend.
 
 ## Variables de entorno
 
@@ -9,17 +9,18 @@ La **plantilla** con nombres y comentarios está en la **raíz** del monorepo: [
 | Variable | Dónde se valida | Notas |
 |----------|-----------------|--------|
 | `DATABASE_URL` | `src/lib/env.ts` (servidor) | URL Postgres; obligatoria sin `SKIP_ENV_VALIDATION` al entrar a `(app)` (layout valida) |
-| `CLERK_SECRET_KEY` | idem | Dashboard Clerk |
-| `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` | idem (y pública) | Misma clave; expuesta al bundle cliente |
-| `CLERK_WEBHOOK_SECRET` | idem (recomendada en prod con webhook) | Svix: sin ella en prod el POST `/api/webhooks/clerk` devuelve 503 |
+| `AUTH_SECRET` | idem | Secreto JWT/sesión Auth.js |
+| `AUTH_URL` | idem | URL absoluta de la app (recomendada en prod; OAuth y emails) |
+| `AUTH_GOOGLE_ID` / `AUTH_GOOGLE_SECRET` | idem (opcionales) | OAuth Google |
+| `RESEND_API_KEY` / `RESEND_FROM` | envío de mails | Obligatorias para “olvidé contraseña” y reportes por mail |
+| `NEXT_PUBLIC_APP_URL` | `getPublicEnv()` | Opcional; enlaces absolutos en cliente |
 | `DEFAULT_ORGANIZATION_NAME` | idem | Opcional: nombre de org en el primer arranque sin orgs |
 | `SKIP_ENV_VALIDATION` | — | Si `1`, no se aplica Zod estricto; solo CI/build; **no producción** |
-| `RESEND_API_KEY`, `RESEND_FROM` | — (lectura puntual en envío) | Reportes programados por mail; ver `.env.example` |
-| `CRON_SECRET` | `POST /api/jobs/run-reports` | En producción obligatorio; ruta **pública para Clerk**, protegida por `Authorization: Bearer` |
+| `CRON_SECRET` | `POST /api/jobs/run-reports` | En producción obligatorio; ruta pública en middleware, protegida por `Authorization: Bearer` |
 
 - **`getServerEnv()`** (`src/lib/env.ts`, memoizado con `react` `cache`): valida y tipa; mensajes de error en español, sin volcar valores secretos. Usado en el layout de `(app)` (fail-fast).
-- **`getPublicEnv()`**: solo `NEXT_PUBLIC_*`; importable en cliente.
-- `ClerkProvider` en los layouts; localización vía `src/lib/clerk-locale.ts`. Redirección post sign-in: `/tablero`.
+- **`getPublicEnv()`**: solo variables públicas seguras para el cliente.
+- Rutas de auth: `/login`, `/registro`, `/login/olvidaste`, `/login/restablecer`. Tras login: `/tablero`.
 
 ## Scripts
 
@@ -31,12 +32,12 @@ Este package depende de `@tracmer-app/database` (`workspace:*`). Tras `pnpm inst
 
 ## Estructura relevante
 
-- `src/app/(auth)/` — rutas públicas (sign-in / sign-up)
+- `src/app/(auth)/` — login, registro, recuperación de contraseña
 - `src/app/(app)/` — zona autenticada (middleware + shell)
-- `src/components/layout/` — shell estilo [Efferd App Shell 4](https://efferd.com/blocks/app-shell) (inset, sidebar colapsable + grupos, contenido con padding). Registry opcional: `components.json` → `@efferd` + `EFFERD_REGISTRY_TOKEN` para instalar bloques vía `npx shadcn add`
-- `src/components/ui/` — primitives estilo shadcn (migrar a `packages/ui` cuando exista)
+- `src/app/api/auth/` — NextAuth (`[...nextauth]`) y registro / reset
+- `src/auth.ts` / `src/auth.config.ts` / `src/auth.edge.ts` — configuración Auth.js (edge sin Prisma en `auth.edge`)
+- `src/components/layout/` — shell (sidebar, header, menú móvil)
+- `src/components/ui/` — primitives estilo shadcn
 - `src/lib/env.ts` — validación Zod (servidor y público), `SKIP_ENV_VALIDATION`
-- `src/lib/auth/` — sincronía Clerk → `users`, `getAppRequestContext` (pertenencia org/rol) y requisitos de sesión; importar en servidor (ver `server.ts` con `server-only`)
+- `src/lib/auth/` — sesión, bootstrap de org, `getAppRequestContext` (pertenencia org/rol); importar en servidor (ver `server.ts` con `server-only`)
 - `src/lib/tenant.ts` — `getCurrentOrganizationId()` a partir del contexto de app
-- `src/app/api/webhooks/clerk/route.ts` — verificación de firma Svix si hay `CLERK_WEBHOOK_SECRET`; procesamiento de eventos mínimo (ver guía deploy)
-- Guía deploy: [`docs/deploy/DEPLOY.md`](../../docs/deploy/DEPLOY.md)

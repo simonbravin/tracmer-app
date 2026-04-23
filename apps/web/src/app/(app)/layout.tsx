@@ -1,9 +1,8 @@
 import type { ReactNode } from "react";
-import { ClerkProvider } from "@clerk/nextjs";
 
+import { auth } from "@/auth";
 import { AppShell } from "@/components/layout/app-shell";
-import { syncClerkUserToDatabase } from "@/lib/auth/server";
-import { clerkLocalization } from "@/lib/clerk-locale";
+import { ensureMembershipBootstrap } from "@/lib/auth/server";
 import { getServerEnv } from "@/lib/env";
 
 export const dynamic = "force-dynamic";
@@ -14,10 +13,9 @@ export default async function AuthenticatedLayout({
   children: ReactNode;
 }>) {
   getServerEnv();
-  await syncClerkUserToDatabase();
-  return (
-    <ClerkProvider localization={clerkLocalization}>
-      <AppShell>{children}</AppShell>
-    </ClerkProvider>
-  );
+  const session = await auth();
+  if (session?.user?.id) {
+    await ensureMembershipBootstrap(session.user.id);
+  }
+  return <AppShell>{children}</AppShell>;
 }

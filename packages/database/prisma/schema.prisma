@@ -96,14 +96,21 @@ model Organization {
 }
 
 model User {
-  id           String    @id @default(cuid())
-  clerkUserId  String    @unique @map("clerk_user_id")
-  email        String
-  displayName  String?   @map("display_name")
-  createdAt    DateTime  @default(now()) @map("created_at")
-  updatedAt    DateTime  @updatedAt @map("updated_at")
-  deletedAt    DateTime? @map("deleted_at")
+  id            String    @id @default(cuid())
+  /// Nombre para sesión Auth.js / proveedores OAuth.
+  name          String?
+  email         String    @unique
+  emailVerified DateTime? @map("email_verified")
+  image         String?
+  /// Solo usuarios con registro por correo+contraseña; OAuth puede quedar null.
+  passwordHash  String?   @map("password_hash")
+  displayName   String?   @map("display_name")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+  deletedAt     DateTime? @map("deleted_at")
 
+  accounts              Account[]
+  passwordResetTokens   PasswordResetToken[]
   memberships           Membership[]
   auditLogs             AuditLog[]             @relation("AuditLogActor")
   salesCreated          Sale[]                 @relation("SaleCreatedBy")
@@ -120,6 +127,41 @@ model User {
   filesUploaded            File[]              @relation("FileUploadedBy")
 
   @@map("users")
+}
+
+/// OAuth / enlaces Auth.js (Google, etc.). Ver https://authjs.dev/reference/adapters/prisma
+model Account {
+  id                String  @id @default(cuid())
+  userId            String  @map("user_id")
+  type              String
+  provider          String
+  providerAccountId String  @map("provider_account_id")
+  refresh_token     String? @map("refresh_token") @db.Text
+  access_token      String? @map("access_token") @db.Text
+  expires_at        Int?    @map("expires_at")
+  token_type        String? @map("token_type")
+  scope             String?
+  id_token          String? @map("id_token") @db.Text
+  session_state     String? @map("session_state")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@map("accounts")
+}
+
+model PasswordResetToken {
+  id        String    @id @default(cuid())
+  userId    String    @map("user_id")
+  tokenHash String    @map("token_hash")
+  expiresAt DateTime  @map("expires_at")
+  usedAt    DateTime? @map("used_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("password_reset_tokens")
 }
 
 /// Catálogo fijo de roles. Invariante de negocio: a lo sumo una membresía con role.code = owner

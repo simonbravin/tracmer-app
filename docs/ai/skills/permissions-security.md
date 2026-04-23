@@ -7,7 +7,7 @@ AuthZ, roles, matriz de módulos, acciones, middleware, Server Actions, APIs, de
 ## Qué priorizar
 
 - `docs/product/BUSINESS_RULES.md` §12 + `docs/architecture/ERD_AND_DATA_MODEL.md` §2.5, §7 + `ARCHITECTURE.md` §7.  
-- **Clerk** = autenticación (sesión/identidad). **App (Postgres)** = membresía, rol, **matriz persistida** (módulo habilitado + permiso por acción).  
+- **Auth.js** = autenticación (sesión/identidad). **App (Postgres)** = membresía, rol, **matriz persistida** (módulo habilitado + permiso por acción).  
 - **Un solo `owner`** por organización.  
 - **Evaluación en backend** en cada lectura/mutación sensible; la UI solo oculta por UX.  
 - **Aislamiento de tenant:** no aceptar `organization_id` arbitrario sin verificar membresía.  
@@ -15,7 +15,7 @@ AuthZ, roles, matriz de módulos, acciones, middleware, Server Actions, APIs, de
 
 ## Errores a evitar
 
-- Resolver permisos de negocio en Clerk o solo en el frontend.  
+- Resolver permisos de negocio en el proveedor de auth o solo en el frontend.  
 - Checks hardcodeados dispersos en lugar de leer la matriz (o proyección cacheada invalidable de la misma fuente).  
 - Exponer URLs R2 largas sin autorización.  
 - Asumir rol desde el cliente.

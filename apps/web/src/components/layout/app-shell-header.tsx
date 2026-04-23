@@ -1,6 +1,5 @@
 "use client";
 
-import { UserButton } from "@clerk/nextjs";
 import { ChevronsLeft, ChevronsRight } from "lucide-react";
 
 import { AppShellBreadcrumbs } from "@/components/layout/app-shell-breadcrumbs";
@@ -8,6 +7,7 @@ import { MobileNav } from "@/components/layout/mobile-nav";
 import { NavCommandMenu } from "@/components/layout/nav-command-menu";
 import { useSidebarLayout } from "@/components/layout/sidebar-layout-context";
 import { ThemeToggle } from "@/components/layout/theme-toggle";
+import { UserNav } from "@/components/layout/user-nav";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 
@@ -38,7 +38,7 @@ export function AppShellHeader() {
         <NavCommandMenu variant="compact" />
         <ThemeToggle />
         <Separator orientation="vertical" className="hidden h-6 sm:block" />
-        <UserButton afterSignOutUrl="/sign-in" />
+        <UserNav />
       </div>
     </header>
   );

@@ -1,9 +1,8 @@
 export { getAppRequestContext } from "./app-context";
-export { syncClerkUserToDatabase } from "./sync-clerk-user";
+export { ensureMembershipBootstrap } from "./bootstrap-user";
 export {
-  getClerkUserId,
-  requireClerkUser,
-  requireClerkUserId,
-  requireAppUserFromClerk,
-} from "./clerk-ids";
+  getSessionUserId,
+  requireSessionUserId,
+  requireAppUser,
+} from "./session-user";
 export type { AppMembership, AppRequestContext } from "./types";

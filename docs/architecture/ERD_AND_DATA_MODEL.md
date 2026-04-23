@@ -40,9 +40,9 @@
 
 | Aspecto | Definición |
 |---------|------------|
-| **Propósito** | Identidad de aplicación enlazada a **Clerk** (sombra mínima); no reemplaza Clerk para passwords. |
-| **Campos principales** | `id`, `clerk_user_id` **UNIQUE**, `email`, `display_name`, `avatar_file_id` **PENDIENTE** (FK opcional a `files`), `created_at`, `updated_at`, `deleted_at` (soft delete de perfil en app; revocación en Clerk es proceso aparte). |
-| **Relaciones** | N:M organizaciones vía `memberships`; actor en `audit_logs`, `report_runs`, etc. |
+| **Propósito** | Identidad de aplicación enlazada a **Auth.js (NextAuth)** vía Prisma: correo/contraseña (hash en app) y cuentas OAuth (`accounts`). |
+| **Campos principales** | `id`, `email` **UNIQUE**, `name`, `email_verified`, `image`, `password_hash` (nullable si solo OAuth), `display_name`, `avatar_file_id` **PENDIENTE** (FK opcional a `files`), `created_at`, `updated_at`, `deleted_at` (soft delete de perfil en app). |
+| **Relaciones** | 1:N `accounts` (OAuth), `password_reset_tokens`; N:M organizaciones vía `memberships`; actor en `audit_logs`, `report_runs`, etc. |
 
 ---
 
@@ -367,7 +367,7 @@ Ver §2 por entidad; no repetir aquí salvo aclaración: enums deben alinearse a
 
 ## 7. Permisos (data model) — resolución
 
-1. **Lectura:** middleware Clerk → `user` → `membership` activo para `organization_id` → `role_id`.  
+1. **Lectura:** sesión Auth.js → `user` (tabla `users`) → `membership` activo para `organization_id` → `role_id`.  
 2. Si `owner` → permitir todo (BR §12.3).  
 3. Si no → `organization_role_enabled_modules.is_enabled` y `organization_role_permissions.is_allowed` para la `permission_definition` requerida por la operación.  
 4. **Escritura:** misma evaluación en servidor antes de mutar.
@@ -406,7 +406,7 @@ Ver §2 por entidad; no repetir aquí salvo aclaración: enums deben alinearse a
 |------|-------------|
 | **Unicidad tenant** | `clients.tax_id` **PENDIENTE** único por org si aplica; `sales.invoice_number` **PENDIENTE** único por org si se usa numeración. |
 | **Owner único** | **UNIQUE** parcial o constraint: exactamente una membresía `role=owner` activa por `organization_id`. |
-| **Clerk** | **UNIQUE** `users.clerk_user_id`. |
+| **Auth / usuarios** | **UNIQUE** `users.email`; **UNIQUE** `accounts(provider, provider_account_id)` (OAuth). |
 | **Membership** | **UNIQUE** `(organization_id, user_id)` filas activas. |
 | **Imputación** | Índice `(collection_id)` y `(sale_id)` en `collection_allocations`. |
 | **Conciliación** | Índice `(collection_id)`, `(bank_deposit_id)`, `(reconciliation_id)` en `reconciliation_lines`. |

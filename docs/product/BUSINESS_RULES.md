@@ -327,7 +327,7 @@ Cada alerta tiene: `tipo`, `severidad`, `organization_id`, referencia a entidad,
 
 ### 12.2 Evaluación
 
-- **Clerk** autentica; **la app** autoriza.  
+- **Auth.js** autentica (identidad/sesión); **la app** autoriza.  
 - Toda mutación y toda lectura sensible valida en **backend**: `usuario ∈ org`, **módulo habilitado**, **acción permitida**.  
 - La UI solo **oculta** o **deshabilita** por UX; **no** es control de seguridad.
 

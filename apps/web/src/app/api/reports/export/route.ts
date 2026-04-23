@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 
-import { auth } from "@clerk/nextjs/server";
+import { auth } from "@/auth";
 
 import { getAppRequestContext } from "@/lib/auth/app-context";
 import { P } from "@/lib/permissions/keys";
@@ -45,8 +45,8 @@ function ext(f: "xlsx" | "pdf" | "csv") {
 }
 
 export async function POST(request: Request) {
-  const { userId } = await auth();
-  if (!userId) {
+  const session = await auth();
+  if (!session?.user?.id) {
     return new NextResponse("No autorizado", { status: 401 });
   }
   const ctx = await getAppRequestContext();

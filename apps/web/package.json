@@ -10,8 +10,7 @@
     "lint": "next lint"
   },
   "dependencies": {
-    "@clerk/localizations": "^3.12.0",
-    "@clerk/nextjs": "^6.12.0",
+    "@auth/prisma-adapter": "^2.11.2",
     "@hookform/resolvers": "^5.2.2",
     "@prisma/client": "^5.22.0",
     "@radix-ui/react-collapsible": "^1.1.12",
@@ -23,6 +22,7 @@
     "@radix-ui/react-slot": "^1.1.0",
     "@radix-ui/react-tooltip": "^1.2.8",
     "@tracmer-app/database": "workspace:*",
+    "bcryptjs": "^3.0.3",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "cmdk": "^1.1.1",
@@ -32,6 +32,7 @@
     "exceljs": "^4.4.0",
     "lucide-react": "^0.468.0",
     "next": "^15.1.0",
+    "next-auth": "5.0.0-beta.31",
     "next-themes": "^0.4.4",
     "pdfkit": "^0.18.0",
     "react": "^19.0.0",

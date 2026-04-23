@@ -1,6 +1,6 @@
 # Guía operativa de deploy — tracmer-app
 
-Monorepo Next.js (`apps/web`) + Postgres (Prisma) + Clerk + opcional Resend y job HTTP de reportes. Sin TMS: control administrativo-financiero.
+Monorepo Next.js (`apps/web`) + Postgres (Prisma) + Auth.js (NextAuth) + opcional Resend y job HTTP de reportes. Sin TMS: control administrativo-financiero.
 
 ---
 
@@ -34,16 +34,13 @@ El cliente Prisma se genera con el schema en `packages/database`: hay un **`post
 
 ---
 
-## 3. Clerk
+## 3. Auth.js (NextAuth)
 
-1. [Clerk Dashboard](https://dashboard.clerk.com) → **Create application** (dev y luego producción, o una sola instancia prod).
-2. **API Keys:** copiar **Publishable key** → `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`; **Secret key** → `CLERK_SECRET_KEY` (solo servidor / Vercel).
-3. **Paths / URLs:** en Clerk, configurar URLs de la app de producción (y preview si las usás):
-   - Dominio de Vercel (`https://tu-proyecto.vercel.app`) o dominio custom.
-   - Redirects / allowed origins según la doc de Clerk para Next.js.
-4. **Webhook (opcional pero recomendado en prod):** Endpoints → Add Endpoint → URL `https://<tu-dominio>/api/webhooks/clerk` → copiar el **Signing secret** (`whsec_…`) → variable `CLERK_WEBHOOK_SECRET` en Vercel. Sin esto, en **producción** el endpoint responde `503` (no acepta webhooks sin verificar).
-
-La sincronización de usuario a la base ocurre principalmente en el layout (`syncClerkUserToDatabase`). El webhook hoy **solo verifica firma** y responde OK; no reemplaza ese flujo.
+1. **`AUTH_SECRET`:** generar con `openssl rand -base64 32` y cargarlo en Vercel (Production / Preview).
+2. **`AUTH_URL`:** URL pública de la app (p. ej. `https://tracmer.bloqer.app`). Mejora callbacks OAuth y enlaces en emails.
+3. **Google (opcional):** en [Google Cloud Console](https://console.cloud.google.com/) crear OAuth Client (Web) → autorizar redirect `https://<dominio>/api/auth/callback/google` → `AUTH_GOOGLE_ID` y `AUTH_GOOGLE_SECRET`.
+4. **Correo + contraseña:** registro en `/registro`; recuperación en `/login/olvidaste` requiere `RESEND_API_KEY` y `RESEND_FROM`.
+5. El **bootstrap** de organización y membresía `owner` (primer inquilino sin orgs) ocurre en el layout de `(app)` tras validar la sesión.
 
 ---
 
@@ -68,14 +65,18 @@ Sin estas variables, la UI de reportes programados puede avisar y el envío fall
    | Variable | Obligatoria | Notas |
    |----------|-------------|--------|
    | `DATABASE_URL` | Sí | Neon + SSL si aplica |
-   | `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` | Sí | Pública |
-   | `CLERK_SECRET_KEY` | Sí | Servidor |
-   | `CLERK_WEBHOOK_SECRET` | Muy recomendada en prod | `whsec_…` del endpoint webhook |
+   | `AUTH_SECRET` | Sí | JWT / sesión Auth.js |
+   | `AUTH_URL` | Muy recomendada en prod | URL pública de la app |
+   | `AUTH_GOOGLE_ID` / `AUTH_GOOGLE_SECRET` | No | OAuth Google |
    | `CRON_SECRET` | Sí en prod para el job | Secreto largo aleatorio |
-   | `RESEND_API_KEY` | Si hay mail | |
+   | `RESEND_API_KEY` | Si hay mail / reset password | |
    | `RESEND_FROM` | Si hay mail | Remitente verificado |
    | `DEFAULT_ORGANIZATION_NAME` | No | Bootstrap primer org |
    | `SKIP_ENV_VALIDATION` | **No en prod** | Solo CI sin env real |
+
+   **Cómo cargarlas en el dashboard de Vercel:** proyecto → **Settings** → **Environment Variables** → **Add New**. Elegí el nombre exacto de la fila (p. ej. `AUTH_SECRET`), el valor, y marcá en qué entornos aplica (**Production**, **Preview**, **Development**). Para secretos, activá **Sensitive** si tu plan lo ofrece. Guardá y redeployá (o **Redeploy** del último deployment) para que los nuevos valores lleguen al runtime.
+
+   Eliminá variables de entorno de cualquier proveedor de autenticación que ya no uses, para no dejar secretos huérfanos.
 
 6. **Deploy** y revisar logs del build.
 
@@ -87,9 +88,9 @@ Sin estas variables, la UI de reportes programados puede avisar y el envío fall
 
 Un endpoint HTTP que ejecuta el runner de **reportes programados** (lee schedules activos, ventana horaria, idempotencia, genera adjuntos y envía mail vía Resend cuando corresponde).
 
-### Por qué “es público para Clerk”
+### Por qué “es público en el middleware”
 
-El **middleware de Clerk** no exige sesión en esta ruta: los crons (Vercel Cron, GitHub Actions, UptimeRobot, etc.) **no tienen cookie de usuario**. La protección es **solo** el header:
+El **middleware de Auth.js** deja esta ruta **sin** exigir sesión: los crons (Vercel Cron, GitHub Actions, UptimeRobot, etc.) **no tienen cookie de usuario**. La protección es **solo** el header:
 
 ```http
 Authorization: Bearer <valor de CRON_SECRET>
@@ -167,7 +168,7 @@ Crear monitor tipo **HTTP(s)** → método **POST** → URL del endpoint. Si la 
 
 ## 7. Verificación manual post-deploy
 
-1. **Login** Clerk → carga `/tablero` (o redirect configurado).
+1. **Login** en `/login` (Google y/o correo) → carga `/tablero`.
 2. **Tablero** con organización activa y KPIs/listas.
 3. **Export de reporte** (usuario con permiso `reports.export`) desde la UI.
 4. **Job:** `curl` con Bearer (ver arriba) → JSON sin 401/503.
@@ -179,6 +180,6 @@ Crear monitor tipo **HTTP(s)** → método **POST** → URL del endpoint. Si la 
 
 - Variables: [`.env.example`](../../.env.example) (raíz del monorepo)
 - Validación estricta al entrar a la app: [`apps/web/src/lib/env.ts`](../../apps/web/src/lib/env.ts)
-- Middleware (rutas públicas Clerk): [`apps/web/src/middleware.ts`](../../apps/web/src/middleware.ts)
+- Middleware (Auth.js, rutas públicas): [`apps/web/src/middleware.ts`](../../apps/web/src/middleware.ts)
+- Auth: [`apps/web/src/auth.ts`](../../apps/web/src/auth.ts), [`apps/web/src/auth.config.ts`](../../apps/web/src/auth.config.ts)
 - Job: [`apps/web/src/app/api/jobs/run-reports/route.ts`](../../apps/web/src/app/api/jobs/run-reports/route.ts)
-- Webhook: [`apps/web/src/app/api/webhooks/clerk/route.ts`](../../apps/web/src/app/api/webhooks/clerk/route.ts)

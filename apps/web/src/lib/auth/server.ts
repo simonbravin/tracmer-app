@@ -1,7 +1,6 @@
 /**
- * **Solo servidor:** sincronía Clerk → DB, contexto de app (user + membresía) y
- * requisitos de sesión. La autorización fina (matriz módulo+acción) seguirá en
- * otra capa; ver docs normativos.
+ * **Solo servidor:** bootstrap de membresía/org, contexto de app (user + membresía) y
+ * requisitos de sesión. La autorización fina (matriz módulo+acción) sigue en otra capa.
  */
 import "server-only";
 

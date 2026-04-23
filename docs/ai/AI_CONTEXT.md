@@ -20,7 +20,7 @@ Si algo no está en esos documentos → **PENDIENTE**; no inventar.
 
 ## 2. Scope
 
-**Incluye (MVP):** auth (Clerk), equipo/invitaciones, clientes y contactos, ventas y estados, cobranzas e imputaciones, bancos (cuentas, depósitos, transferencias), conciliación, alertas, auditoría, tablero y reportes con filtros, exportes (PDF/Excel/CSV según producto), reportes programados (definición + schedule + destinatarios + runs), archivos (R2), roles base y matriz de permisos.
+**Incluye (MVP):** auth (Auth.js: Google + correo/contraseña, reset), equipo/invitaciones, clientes y contactos, ventas y estados, cobranzas e imputaciones, bancos (cuentas, depósitos, transferencias), conciliación, alertas, auditoría, tablero y reportes con filtros, exportes (PDF/Excel/CSV según producto), reportes programados (definición + schedule + destinatarios + runs), archivos (R2), roles base y matriz de permisos.
 
 **No incluye (MVP):** integraciones bancarias/API, ARCA, facturación electrónica externa, app móvil nativa, multi-idioma, TMS u operación logística.
 
@@ -85,8 +85,8 @@ Si algo no está en esos documentos → **PENDIENTE**; no inventar.
 ## 9. Architecture summary
 
 - **Next.js** (App Router), **React**, **TypeScript**, **Tailwind**.  
-- **Postgres** (Neon) + **Prisma**; capas: UI → actions delgados → servicios → dominio → repos/Prisma → infra (Resend, R2, Clerk) (`ARCHITECTURE.md` §5).  
-- **Clerk:** autenticación; app: membresías y permisos.  
+- **Postgres** (Neon) + **Prisma**; capas: UI → actions delgados → servicios → dominio → repos/Prisma → infra (Resend, R2, Auth.js) (`ARCHITECTURE.md` §5).  
+- **Auth.js:** autenticación; app: membresías y permisos.  
 - **R2:** archivos; metadata en `files`; acceso por **URL firmada** corta desde backend (BR §17.3).  
 - **Resend:** email (invitaciones complementarias, reportes, exportes).  
 - **Vercel:** deploy; jobs/cron evolutivos (`ARCHITECTURE.md` §16).  
@@ -100,7 +100,7 @@ No sustituye el ERD; solo ancla nombres:
 
 | Área | Entidades |
 |------|-----------|
-| Tenant / auth app | `organizations`, `users` (sombra Clerk), `memberships`, `roles` |
+| Tenant / auth app | `organizations`, `users`, `accounts`, `memberships`, `roles` |
 | Permisos | `app_modules`, `permission_definitions`, `organization_role_enabled_modules`, `organization_role_permissions` |
 | CRM | `clients`, `client_contacts` |
 | Operación | `sales`, `sale_lines` (evolutivo / política MVP **PENDIENTE**), `collections`, `collection_allocations`, `collection_fees` |
@@ -155,7 +155,7 @@ Tomado de `BUSINESS_RULES.md` §16 y `ERD_AND_DATA_MODEL.md` §13 (lista no exha
 - **`report_saved_filters`**, `job_runs` genérico vs solo `report_runs` (ERD §9, §13).  
 - FK compuesto anti cross-tenant en DB vs solo aplicación (ERD §10).  
 - Estrategia **owner**: bypass sin filas vs grants materializados (ERD §2.5, §13).  
-- Sincronización **Clerk ↔ users** (webhooks) detallada (`ARCHITECTURE.md` §22).
+- Bootstrap de **usuario ↔ org** tras login detallado en layout `(app)` y `ARCHITECTURE.md` §6–7.
 
 ---
 

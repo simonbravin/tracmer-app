@@ -2,21 +2,21 @@ import "server-only";
 
 import { prisma } from "@tracmer-app/database";
 
-import { getClerkUserId } from "./clerk-ids";
-import type { AppRequestContext, AppMembership } from "./types";
+import { getSessionUserId } from "./session-user";
+import type { AppMembership, AppRequestContext } from "./types";
 
 /**
  * Resolución de “quién” + primera membresía / org (MVP).
  * PENDIENTE: “organización activa” con cookie/segmento, multi-org, matriz de permisos.
  */
 export async function getAppRequestContext(): Promise<AppRequestContext | null> {
-  const clerkUserId = await getClerkUserId();
-  if (!clerkUserId) {
+  const sessionUserId = await getSessionUserId();
+  if (!sessionUserId) {
     return null;
   }
 
   const appUser = await prisma.user.findFirst({
-    where: { clerkUserId, deletedAt: null },
+    where: { id: sessionUserId, deletedAt: null },
   });
   if (!appUser) {
     return null;
@@ -34,7 +34,7 @@ export async function getAppRequestContext(): Promise<AppRequestContext | null> 
   const primary: AppMembership | null = m;
   const org = primary?.organization ?? null;
   return {
-    clerkUserId,
+    sessionUserId,
     appUser,
     primaryMembership: primary,
     organization: org,

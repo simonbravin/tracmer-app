@@ -10,7 +10,7 @@ export type AppMembership = Membership & {
 };
 
 export type AppRequestContext = {
-  clerkUserId: string;
+  sessionUserId: string;
   appUser: User;
   /**
    * Primera membresía activa en DB (MVP: suele ser una org).

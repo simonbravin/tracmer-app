@@ -35,7 +35,7 @@ Este documento define la arquitectura recomendada para **tracmer-app**: platafor
 | Principio | Significado práctico |
 |-----------|----------------------|
 | **Backend-first** | Reglas de negocio, permisos, límites de moneda/FX, estados y transiciones se aplican en **servidor** (Server Actions, rutas API, jobs). La UI **no** es fuente de verdad ni barrera de seguridad. |
-| **Separación de capas** | Dominio (reglas puras) ≠ aplicación (orquestación) ≠ infraestructura (DB, email, R2, Clerk) ≠ presentación (React). |
+| **Separación de capas** | Dominio (reglas puras) ≠ aplicación (orquestación) ≠ infraestructura (DB, email, R2, Auth.js) ≠ presentación (React). |
 | **No duplicación de lógica** | Especialmente: permisos, validación de invariantes, cálculos de equivalentes en moneda, estados de cobranza/conciliación. |
 | **No lógica sensible en UI** | La UI puede **sugerir** (ocultar botones), pero el servidor **niega** siempre que corresponda. |
 | **Reusabilidad sistemática** | Tablas, filtros, formularios, layouts, tokens, plantillas de email y patrones de export compartidos. |
@@ -56,7 +56,7 @@ Este documento define la arquitectura recomendada para **tracmer-app**: platafor
 | **TypeScript** | Tipado | Contratos explícitos entre capas; menos errores en dominio financiero. |
 | **Tailwind CSS** | Estilos utility-first | Velocidad, consistencia con tokens, integración con shadcn/ui. |
 | **shadcn/ui** | Biblioteca de componentes | Base homogénea de UI; control del código en el repo; accesibilidad razonable por defecto. |
-| **Clerk** | Autenticación | Sesiones, usuarios, invitaciones/recuperación gestionadas por proveedor; reduce superficie de auth propia. |
+| **Auth.js (NextAuth)** | Autenticación | Sesiones JWT, Google OAuth, correo+contraseña y reset por token en app; Prisma como backing store de usuarios y cuentas. |
 | **Neon + PostgreSQL** | Base de datos | Postgres gestionado, ramas si hace falta; adecuado para relaciones financieras y constraints. |
 | **Prisma** | ORM / acceso a datos | Esquema declarativo, migraciones, tipos generados; conviene para equipo pequeño y flujo con IA. |
 | **Resend** | Email transaccional y reportes | API simple; encaja con templates y envíos desde jobs. |
@@ -126,7 +126,7 @@ Dominio (entidades, invariantes, políticas puras cuando aplique)
     ↓ persisten vía
 Repositorios / persistencia (Prisma en implementación)
     ↓ integran
-Infraestructura (Resend, R2, Clerk metadata sync, jobs)
+Infraestructura (Resend, R2, Auth.js / bootstrap de usuario, jobs)
 ```
 
 ### 5.2 Dónde vive cada tipo de lógica
@@ -139,7 +139,7 @@ Infraestructura (Resend, R2, Clerk metadata sync, jobs)
 | Reglas duras (invariantes) | Dominio (funciones puras o servicios de dominio) mezcladas con aplicación al inicio; extraer si crecen | Condicionales copy-paste en múltiples actions. |
 | Acceso SQL/Prisma | Repositorios / módulos de infraestructura | Prisma esparcido en 50 archivos sin convención. |
 | Envío de email, upload a R2 | Adaptadores de infraestructura | Llamar Resend directamente desde un componente cliente. |
-| Autenticación | Clerk (SDK, middleware) | Reimplementar passwords. |
+| Autenticación | Auth.js (`auth`, middleware, providers) | Credenciales débiles o lógica de permisos fuera del servidor. |
 
 ### 5.3 Server Actions y handlers
 
@@ -157,7 +157,7 @@ Infraestructura (Resend, R2, Clerk metadata sync, jobs)
 
 ### 6.2 Scoping de datos
 
-- **Contexto de request:** tras validar sesión (Clerk), resolver `userId` → **membresía** en `organization_id` (tabla propia de memberships).
+- **Contexto de request:** tras validar sesión (Auth.js), resolver `userId` → **membresía** en `organization_id` (tabla propia de memberships).
 - **Organización activa:** definir explícitamente (header, cookie segura, o segmento de ruta); nunca aceptar `organization_id` arbitrario sin verificar rol en esa org.
 
 ### 6.3 Ownership y seguridad
@@ -178,7 +178,7 @@ Infraestructura (Resend, R2, Clerk metadata sync, jobs)
 
 | Concern | Responsable |
 |---------|-------------|
-| Identidad, sesión, MFA, flujos de invitación/recuperación “estándar” | **Clerk** |
+| Identidad, sesión, login social/correo, recuperación de contraseña | **Auth.js + Postgres (`users`, `accounts`)** |
 | Membresía en organización, rol, permisos por módulo/acción | **Aplicación (Postgres)** |
 | Enforcement en cada mutación/lectura sensible | **Servidor** |
 
@@ -195,7 +195,7 @@ Infraestructura (Resend, R2, Clerk metadata sync, jobs)
 
 ### 7.4 Enforcement
 
-- **Middleware (Clerk):** autenticación y rutas públicas.
+- **Middleware (Auth.js):** autenticación y rutas públicas.
 - **Autorización de negocio:** después de sesión, en servidor, con datos de membership; tests de casos críticos recomendados para reglas de owner y exports.
 
 ---
@@ -218,7 +218,7 @@ Mapa modular (sin ERD). Cada módulo agrupa casos de uso, entidades y políticas
 | **Auditoría** | Registro append-only de acciones sensibles y trazas de negocio clave. |
 | **Reportes y exportaciones** | Definiciones de reporte, filtros guardados, colas de generación, entrega. |
 | **Configuración** | Settings a nivel org y preferencias de usuario cuando aplique. |
-| **Usuarios / equipo** | Membresías, roles, invitaciones coordinadas con Clerk; permisos persistidos en app. |
+| **Usuarios / equipo** | Membresías, roles, invitaciones en app; identidad vía Auth.js; permisos persistidos en app. |
 
 **Principio:** Venta, Cobranza, Depósito y Conciliación son conceptos **separados**; el código no debe colapsarlos en un solo “movimiento genérico” salvo que exista un **motivo de dominio** documentado.
 
@@ -275,7 +275,7 @@ Estructura de alto nivel (App Router). Los nombres son orientativos; la jerarqu�
 | `/configuracion/alertas` | Reglas/config de alertas. |
 | `/configuracion/organizacion` | Datos generales de la empresa (owner). |
 
-Rutas de sign-in/sign-up y flujos Clerk según convención del proveedor (típicamente agrupadas bajo segmentos dedicados o hosted pages).
+Rutas de autenticación en la app: `/login`, `/registro`, `/login/olvidaste`, `/login/restablecer` y callback `/api/auth/*`.
 
 ---
 
@@ -366,7 +366,7 @@ Rutas de sign-in/sign-up y flujos Clerk según convención del proveedor (típic
 
 ### 14.2 Casos de uso
 
-- Invitaciones a equipo; recuperación delegada en gran parte a Clerk pero emails transaccionales propios si se personalizan.
+- Invitaciones a equipo; recuperación de contraseña por enlace (Resend) y otros correos transaccionales propios.
 - Reportes programados y envíos manuales de exportes.
 - Notificaciones operativas futuras bajo el mismo layout.
 
@@ -487,7 +487,7 @@ Las siguientes decisiones **no** están cerradas en este documento y deben resol
 | Estrategia de conciliación UX | Flujo asistido vs edición libre; reversibilidad. |
 | Redondeo FX | Política por evento contable; uso de tasa oficial vs operativa. |
 | Retención de archivos y PII | Políticas legales/operativas de borrado y anonimización. |
-| Sincronización Clerk ↔ DB | Webhooks y tabla de usuarios; manejo de eliminación de usuario en Clerk. |
+| Ciclo de vida de usuario en Auth.js | Vincular OAuth a `users`; política de borrado/soft delete y revocación de sesiones. |
 
 ---
 

@@ -1,6 +1,5 @@
 import "server-only";
 
-import { currentUser, auth } from "@clerk/nextjs/server";
 import { prisma } from "@tracmer-app/database";
 
 import { getServerEnv } from "@/lib/env";
@@ -25,47 +24,13 @@ async function ensureBaseRoles() {
 }
 
 /**
- * Sincroniza el usuario de Clerk a `users` (sombra).
- * Si no hay **ninguna** organización aún (bootstrap) y el usuario aún no tiene
- * membresía, se crea una org por defecto y rol `owner` — adecuado al primer
- * inquilino. PENDIENTE: invitación cuando la org ya exista y no haya membership.
+ * Si no hay **ninguna** organización aún (bootstrap) y el usuario no tiene
+ * membresía activa, crea una org por defecto y rol `owner`.
+ * PENDIENTE: invitación cuando la org ya exista y no haya membership.
  */
-export async function syncClerkUserToDatabase() {
-  const { userId } = await auth();
-  if (!userId) {
-    return;
-  }
-
-  const cu = await currentUser();
-  if (!cu) {
-    return;
-  }
-
-  const email =
-    cu.primaryEmailAddress?.emailAddress ??
-    cu.emailAddresses[0]?.emailAddress ??
-    "pendiente@usuario.local";
-  const displayName =
-    [cu.firstName, cu.lastName].filter(Boolean).join(" ").trim() ||
-    (cu.username ?? null) ||
-    email;
-
-  const appUser = await prisma.user.upsert({
-    where: { clerkUserId: cu.id },
-    create: {
-      clerkUserId: cu.id,
-      email,
-      displayName,
-    },
-    update: {
-      email,
-      displayName,
-      deletedAt: null,
-    },
-  });
-
+export async function ensureMembershipBootstrap(userId: string) {
   const hasMembership = await prisma.membership.count({
-    where: { userId: appUser.id, deletedAt: null, status: "active" },
+    where: { userId, deletedAt: null, status: "active" },
   });
   if (hasMembership > 0) {
     return;
@@ -93,7 +58,7 @@ export async function syncClerkUserToDatabase() {
     await tx.membership.create({
       data: {
         organizationId: org.id,
-        userId: appUser.id,
+        userId,
         roleId: owner.id,
         status: "active",
       },
