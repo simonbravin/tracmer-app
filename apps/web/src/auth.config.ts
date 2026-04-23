@@ -1,15 +1,16 @@
 import type { NextAuthConfig } from "next-auth";
 import Google from "next-auth/providers/google";
 
-const googleId = process.env.AUTH_GOOGLE_ID?.trim();
-const googleSecret = process.env.AUTH_GOOGLE_SECRET?.trim();
+import { getGoogleOAuthCredentials } from "@/lib/auth/google-oauth-env";
+
+const googleCreds = getGoogleOAuthCredentials();
 
 const providers: NextAuthConfig["providers"] = [];
-if (googleId && googleSecret) {
+if (googleCreds) {
   providers.push(
     Google({
-      clientId: googleId,
-      clientSecret: googleSecret,
+      clientId: googleCreds.id,
+      clientSecret: googleCreds.secret,
       allowDangerousEmailAccountLinking: false,
     }),
   );

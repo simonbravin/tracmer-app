@@ -7,9 +7,11 @@ import type { User } from "@tracmer-app/database";
 
 import { auth } from "@/auth";
 
+import { resolveSessionUserId } from "./resolve-session-user-id";
+
 export async function getSessionUserId(): Promise<string | null> {
   const session = await auth();
-  return session?.user?.id ?? null;
+  return (await resolveSessionUserId(session)) ?? null;
 }
 
 export async function requireSessionUserId(): Promise<string> {

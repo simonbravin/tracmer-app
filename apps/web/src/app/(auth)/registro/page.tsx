@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 
 import { auth } from "@/auth";
 import { RegisterForm } from "@/components/auth/register-form";
+import { isGoogleOAuthConfigured } from "@/lib/auth/google-oauth-env";
 
 export const dynamic = "force-dynamic";
 
@@ -20,9 +21,7 @@ export default async function RegistroPage({
   if (session?.user) {
     redirect(safeAfter);
   }
-  const showGoogle = !!(
-    process.env.AUTH_GOOGLE_ID?.trim() && process.env.AUTH_GOOGLE_SECRET?.trim()
-  );
+  const showGoogle = isGoogleOAuthConfigured();
   return (
     <Suspense fallback={<p className="text-sm text-muted-foreground">Cargando…</p>}>
       <RegisterForm showGoogle={showGoogle} />

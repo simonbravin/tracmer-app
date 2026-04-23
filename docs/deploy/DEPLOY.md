@@ -43,7 +43,7 @@ El cliente Prisma se genera con el schema en `packages/database`: hay un **`post
      - Producción: `https://<tu-dominio-prod>/api/auth/callback/google`
      - Preview Vercel: `https://<nombre-proyecto>-git-<rama>-<team>.vercel.app/api/auth/callback/google` (cada preview puede variar; alternativa: probar OAuth solo en Production o usar dominio custom estable para previews).
    - **Authorized JavaScript origins** (si Google lo pide): `https://<mismo-host>` sin path.
-   - Variables en Vercel: **`AUTH_GOOGLE_ID`** (Client ID) y **`AUTH_GOOGLE_SECRET`** (Client secret), mismos nombres que lee la app. Marcá **Production** y/o **Preview** según donde pruebes; sin variables en Preview, el botón Google puede no aparecer o fallar con `401 invalid_client` / *OAuth client was not found*.
+   - Variables en Vercel: **`AUTH_GOOGLE_ID`** y **`AUTH_GOOGLE_SECRET`** (preferido), o alternativamente **`GOOGLE_CLIENT_ID`** y **`GOOGLE_CLIENT_SECRET`** (misma app lee ambos nombres). El **Client ID** también puede estar como **`NEXT_PUBLIC_GOOGLE_CLIENT_ID`** en algunos tutoriales; el **secret** nunca debe ser `NEXT_PUBLIC_*`. Marcá **Production** y/o **Preview** según donde pruebes; sin variables en Preview, el botón Google puede no aparecer o fallar con `401 invalid_client` / *OAuth client was not found*.
    - Tras cambiar variables: **Redeploy**.
 4. **Correo + contraseña:** registro en `/registro`; recuperación en `/login/olvidaste` requiere `RESEND_API_KEY` y `RESEND_FROM`.
 5. **Onboarding multi-empresa:** la primera organización y la membresía `owner` se crean en **`/onboarding/empresa`** (usuario autenticado sin membresía activa es redirigido desde el área `(app)`).

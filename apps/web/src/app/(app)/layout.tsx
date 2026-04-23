@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 
 import { auth } from "@/auth";
 import { AppShell } from "@/components/layout/app-shell";
+import { resolveSessionUserId } from "@/lib/auth/resolve-session-user-id";
 import { getServerEnv } from "@/lib/env";
 import { prisma } from "@tracmer-app/database";
 
@@ -15,10 +16,11 @@ export default async function AuthenticatedLayout({
 }>) {
   getServerEnv();
   const session = await auth();
-  if (session?.user?.id) {
+  const userId = await resolveSessionUserId(session);
+  if (userId) {
     const activeMemberships = await prisma.membership.count({
       where: {
-        userId: session.user.id,
+        userId,
         deletedAt: null,
         status: "active",
       },
