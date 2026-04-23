@@ -2,7 +2,7 @@ import "server-only";
 
 import type { CurrencyCode } from "@prisma/client";
 import { prisma } from "@tracmer-app/database";
-import type { Prisma as P } from "@tracmer-app/database";
+import type { Prisma as P } from "@prisma/client";
 
 export function parseBankDate(ymd: string): Date {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(ymd)) {

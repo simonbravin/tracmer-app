@@ -3,7 +3,7 @@
 import { useFormState, useFormStatus } from "react-dom";
 import Link from "next/link";
 import { useMemo, useState } from "react";
-import { Prisma } from "@prisma/client";
+import Decimal from "decimal.js";
 
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -31,12 +31,12 @@ function arsHint(amountStr: string, ccy: "ARS" | "USD", fxStr: string) {
   if (ccy === "ARS" || !Number.isFinite(n) || n <= 0) {
     return null;
   }
-  const a = new Prisma.Decimal(String(n));
+  const a = new Decimal(String(n));
   const t = String(fxStr).replace(/\s/g, "").replace(",", ".").trim();
   if (t === "") {
     return null;
   }
-  const f = new Prisma.Decimal(t);
+  const f = new Decimal(t);
   if (f.lte(0)) {
     return null;
   }

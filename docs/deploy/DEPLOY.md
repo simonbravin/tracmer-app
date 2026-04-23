@@ -30,7 +30,7 @@ Monorepo Next.js (`apps/web`) + Postgres (Prisma) + Clerk + opcional Resend y jo
 
 - **Cómo (CI):** mismo comando en un paso del pipeline, con el secreto `DATABASE_URL` inyectado (no commitear la URL).
 
-`pnpm db:generate` genera el cliente Prisma; suele ejecutarse en `pnpm install` postinstall del paquete database o en build — revisá el `package.json` raíz si ajustás el pipeline.
+El cliente Prisma se genera con el schema en `packages/database`: hay un **`postinstall`** en ese paquete (`prisma generate`) y un **`prebuild`** en `apps/web` que vuelve a ejecutar `prisma generate` antes de `next build` (útil en Vercel para que `@prisma/client` en la app tenga enums y tipos al chequear TypeScript).
 
 ---
 

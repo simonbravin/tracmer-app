@@ -3,7 +3,7 @@ import "server-only";
 import type { SaleStatus } from "@prisma/client";
 
 import { prisma } from "@tracmer-app/database";
-import type { Prisma } from "@tracmer-app/database";
+import type { Prisma } from "@prisma/client";
 
 export function parseInvoiceDateInput(ymd: string): Date {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(ymd)) {

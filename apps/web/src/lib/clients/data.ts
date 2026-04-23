@@ -1,7 +1,7 @@
 import "server-only";
 
 import { prisma } from "@tracmer-app/database";
-import type { Prisma } from "@tracmer-app/database";
+import type { Prisma } from "@prisma/client";
 
 export async function listClients(
   orgId: string,
