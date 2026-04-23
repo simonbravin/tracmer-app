@@ -2,9 +2,31 @@
  * Navegación principal (es-AR). Solo estructura; sin lógica de permisos aún.
  * Futuro: filtrar ítems según matriz persistida + tenant (ver docs normativos).
  */
+import type { LucideIcon } from "lucide-react";
+import {
+  ArrowLeftRight,
+  Banknote,
+  BarChart3,
+  Bell,
+  Building2,
+  CalendarClock,
+  FileText,
+  Landmark,
+  LayoutDashboard,
+  LayoutGrid,
+  PiggyBank,
+  Scale,
+  Shield,
+  SlidersHorizontal,
+  UserCircle,
+  Users,
+  UsersRound,
+} from "lucide-react";
+
 export type NavLink = {
   title: string;
   href: string;
+  icon: LucideIcon;
 };
 
 export type NavSection = {
@@ -16,46 +38,46 @@ export const appNavigation: NavSection[] = [
   {
     title: "Principal",
     links: [
-      { title: "Tablero", href: "/tablero" },
-      { title: "Alertas", href: "/alertas" },
+      { title: "Tablero", href: "/tablero", icon: LayoutDashboard },
+      { title: "Alertas", href: "/alertas", icon: Bell },
     ],
   },
   {
     title: "Operaciones",
     links: [
-      { title: "Ventas", href: "/operaciones/ventas" },
-      { title: "Cobranzas", href: "/operaciones/cobranzas" },
+      { title: "Ventas", href: "/operaciones/ventas", icon: FileText },
+      { title: "Cobranzas", href: "/operaciones/cobranzas", icon: Banknote },
     ],
   },
   {
     title: "Bancos",
     links: [
-      { title: "Cuentas", href: "/bancos/cuentas" },
-      { title: "Depósitos", href: "/bancos/depositos" },
-      { title: "Transferencias", href: "/bancos/transferencias" },
-      { title: "Conciliaciones", href: "/bancos/conciliaciones" },
+      { title: "Cuentas", href: "/bancos/cuentas", icon: Landmark },
+      { title: "Depósitos", href: "/bancos/depositos", icon: PiggyBank },
+      { title: "Transferencias", href: "/bancos/transferencias", icon: ArrowLeftRight },
+      { title: "Conciliaciones", href: "/bancos/conciliaciones", icon: Scale },
     ],
   },
   {
     title: "Directorio",
-    links: [{ title: "Clientes", href: "/clientes" }],
+    links: [{ title: "Clientes", href: "/clientes", icon: Users }],
   },
   {
     title: "Análisis",
     links: [
-      { title: "Reportes", href: "/reportes" },
-      { title: "Reportes programados", href: "/reportes/programados" },
+      { title: "Reportes", href: "/reportes", icon: BarChart3 },
+      { title: "Reportes programados", href: "/reportes/programados", icon: CalendarClock },
     ],
   },
   {
     title: "Configuración",
     links: [
-      { title: "Perfil", href: "/configuracion/perfil" },
-      { title: "Equipo", href: "/configuracion/equipo" },
-      { title: "Permisos por rol", href: "/configuracion/permisos" },
-      { title: "Módulos y permisos", href: "/configuracion/modulos-permisos" },
-      { title: "Reglas de alertas (futuro)", href: "/configuracion/alertas" },
-      { title: "Organización", href: "/configuracion/organizacion" },
+      { title: "Perfil", href: "/configuracion/perfil", icon: UserCircle },
+      { title: "Equipo", href: "/configuracion/equipo", icon: UsersRound },
+      { title: "Permisos por rol", href: "/configuracion/permisos", icon: Shield },
+      { title: "Módulos y permisos", href: "/configuracion/modulos-permisos", icon: LayoutGrid },
+      { title: "Reglas de alertas (futuro)", href: "/configuracion/alertas", icon: SlidersHorizontal },
+      { title: "Organización", href: "/configuracion/organizacion", icon: Building2 },
     ],
   },
 ];

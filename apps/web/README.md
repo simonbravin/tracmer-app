@@ -33,7 +33,7 @@ Este package depende de `@tracmer-app/database` (`workspace:*`). Tras `pnpm inst
 
 - `src/app/(auth)/` — rutas públicas (sign-in / sign-up)
 - `src/app/(app)/` — zona autenticada (middleware + shell)
-- `src/components/layout/` — shell (sidebar, topbar, menú móvil)
+- `src/components/layout/` — shell estilo [Efferd App Shell 4](https://efferd.com/blocks/app-shell) (inset, sidebar colapsable + grupos, contenido con padding). Registry opcional: `components.json` → `@efferd` + `EFFERD_REGISTRY_TOKEN` para instalar bloques vía `npx shadcn add`
 - `src/components/ui/` — primitives estilo shadcn (migrar a `packages/ui` cuando exista)
 - `src/lib/env.ts` — validación Zod (servidor y público), `SKIP_ENV_VALIDATION`
 - `src/lib/auth/` — sincronía Clerk → `users`, `getAppRequestContext` (pertenencia org/rol) y requisitos de sesión; importar en servidor (ver `server.ts` con `server-only`)
