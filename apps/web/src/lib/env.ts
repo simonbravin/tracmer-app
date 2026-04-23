@@ -18,7 +18,7 @@ const serverSchema = z.object({
   /** Solo requerida para “olvidé contraseña” y otros mails transaccionales. */
   RESEND_API_KEY: z.string().optional().default(""),
   RESEND_FROM: z.string().optional().default(""),
-  /** Override del nombre de org en bootstrap. */
+  /** Reservado (onboarding en UI); puede usarse como default futuro. */
   DEFAULT_ORGANIZATION_NAME: z.string().optional().default(""),
 });
 

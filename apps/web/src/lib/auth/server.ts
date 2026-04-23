@@ -1,6 +1,6 @@
 /**
- * **Solo servidor:** bootstrap de membresía/org, contexto de app (user + membresía) y
- * requisitos de sesión. La autorización fina (matriz módulo+acción) sigue en otra capa.
+ * **Solo servidor:** contexto de app (user + membresía) y requisitos de sesión.
+ * Onboarding de org y creación de membresías vía flujos dedicados (`/onboarding`, invitaciones).
  */
 import "server-only";
 

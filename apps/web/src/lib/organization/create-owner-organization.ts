@@ -2,10 +2,7 @@ import "server-only";
 
 import { prisma } from "@tracmer-app/database";
 
-import { getServerEnv } from "@/lib/env";
 import { ensurePermissionCatalog, seedOrganizationPermissionMatrixIfEmpty } from "@/lib/permissions/seed";
-
-const DEFAULT_ORG_NAME = "Organización";
 
 const SEED_ROLES: { code: string; displayName: string; sortOrder: number }[] = [
   { code: "owner", displayName: "Propietario", sortOrder: 0 },
@@ -23,36 +20,39 @@ async function ensureBaseRoles() {
   }
 }
 
-/**
- * Si no hay **ninguna** organización aún (bootstrap) y el usuario no tiene
- * membresía activa, crea una org por defecto y rol `owner`.
- * PENDIENTE: invitación cuando la org ya exista y no haya membership.
- */
-export async function ensureMembershipBootstrap(userId: string) {
-  const hasMembership = await prisma.membership.count({
-    where: { userId, deletedAt: null, status: "active" },
-  });
-  if (hasMembership > 0) {
-    return;
-  }
+export type CreateOwnerOrganizationInput = {
+  name: string;
+  legalName?: string | null;
+  timezone?: string | null;
+};
 
-  const anyOrg = await prisma.organization.count({
-    where: { deletedAt: null },
-  });
-  if (anyOrg > 0) {
-    return;
+/**
+ * Crea organización + matriz de permisos + membresía `owner` **active** para el usuario.
+ * Requiere que el usuario no tenga ya una membresía activa (validar en la capa llamadora).
+ */
+export async function createOwnerOrganizationForUser(
+  userId: string,
+  input: CreateOwnerOrganizationInput,
+): Promise<{ organizationId: string }> {
+  const name = input.name.trim();
+  if (name.length < 2) {
+    throw new Error("El nombre de la empresa es demasiado corto.");
   }
 
   await ensureBaseRoles();
   await ensurePermissionCatalog();
 
   const owner = await prisma.role.findUniqueOrThrow({ where: { code: "owner" } });
-  const env = getServerEnv();
-  const orgName = env.defaultOrganizationName?.trim() || DEFAULT_ORG_NAME;
+  const tz = input.timezone?.trim() || "America/Argentina/Buenos_Aires";
+  const legal = input.legalName?.trim() || null;
 
-  await prisma.$transaction(async (tx) => {
+  return prisma.$transaction(async (tx) => {
     const org = await tx.organization.create({
-      data: { name: orgName },
+      data: {
+        name,
+        legalName: legal,
+        timezone: tz,
+      },
     });
     await seedOrganizationPermissionMatrixIfEmpty(org.id, tx);
     await tx.membership.create({
@@ -63,5 +63,6 @@ export async function ensureMembershipBootstrap(userId: string) {
         status: "active",
       },
     });
+    return { organizationId: org.id };
   });
 }

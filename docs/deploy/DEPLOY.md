@@ -21,7 +21,7 @@ Monorepo Next.js (`apps/web`) + Postgres (Prisma) + Auth.js (NextAuth) + opciona
 ### Migraciones
 
 - **Cuándo:** después del primer deploy o cada vez que en el repo haya migraciones Prisma nuevas que deban aplicarse a la base de **producción**.
-- **Cómo (local contra prod):** en la raíz del monorepo, con `DATABASE_URL` apuntando a Neon prod:
+- **Cómo (local contra prod):** en la raíz del monorepo, con `DATABASE_URL` apuntando a Neon prod (misma red que pueda abrir TCP al host de Neon; si ves **P1001** “Can’t reach database server”, el entorno no tiene ruta al pooler — ejecutá el comando desde tu PC, VPN si aplica, o un runner CI con egress a internet).
 
   ```bash
   pnpm install
@@ -36,11 +36,17 @@ El cliente Prisma se genera con el schema en `packages/database`: hay un **`post
 
 ## 3. Auth.js (NextAuth)
 
-1. **`AUTH_SECRET`:** generar con `openssl rand -base64 32` y cargarlo en Vercel (Production / Preview).
+1. **`AUTH_SECRET`:** generar con `openssl rand -base64 32` (o `node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"`) y cargarlo en Vercel (Production / Preview).
 2. **`AUTH_URL`:** URL pública de la app (p. ej. `https://tracmer.bloqer.app`). Mejora callbacks OAuth y enlaces en emails.
-3. **Google (opcional):** en [Google Cloud Console](https://console.cloud.google.com/) crear OAuth Client (Web) → autorizar redirect `https://<dominio>/api/auth/callback/google` → `AUTH_GOOGLE_ID` y `AUTH_GOOGLE_SECRET`.
+3. **Google (opcional):** en [Google Cloud Console](https://console.cloud.google.com/apis/credentials) crear **OAuth client ID** de tipo **Web application** y definir:
+   - **Authorized redirect URIs:** una entrada **exacta** por origen que use la app, por ejemplo:
+     - Producción: `https://<tu-dominio-prod>/api/auth/callback/google`
+     - Preview Vercel: `https://<nombre-proyecto>-git-<rama>-<team>.vercel.app/api/auth/callback/google` (cada preview puede variar; alternativa: probar OAuth solo en Production o usar dominio custom estable para previews).
+   - **Authorized JavaScript origins** (si Google lo pide): `https://<mismo-host>` sin path.
+   - Variables en Vercel: **`AUTH_GOOGLE_ID`** (Client ID) y **`AUTH_GOOGLE_SECRET`** (Client secret), mismos nombres que lee la app. Marcá **Production** y/o **Preview** según donde pruebes; sin variables en Preview, el botón Google puede no aparecer o fallar con `401 invalid_client` / *OAuth client was not found*.
+   - Tras cambiar variables: **Redeploy**.
 4. **Correo + contraseña:** registro en `/registro`; recuperación en `/login/olvidaste` requiere `RESEND_API_KEY` y `RESEND_FROM`.
-5. El **bootstrap** de organización y membresía `owner` (primer inquilino sin orgs) ocurre en el layout de `(app)` tras validar la sesión.
+5. **Onboarding multi-empresa:** la primera organización y la membresía `owner` se crean en **`/onboarding/empresa`** (usuario autenticado sin membresía activa es redirigido desde el área `(app)`).
 
 ---
 
@@ -71,7 +77,7 @@ Sin estas variables, la UI de reportes programados puede avisar y el envío fall
    | `CRON_SECRET` | Sí en prod para el job | Secreto largo aleatorio |
    | `RESEND_API_KEY` | Si hay mail / reset password | |
    | `RESEND_FROM` | Si hay mail | Remitente verificado |
-   | `DEFAULT_ORGANIZATION_NAME` | No | Bootstrap primer org |
+   | `DEFAULT_ORGANIZATION_NAME` | No | Nombre sugerido en onboarding (opcional) |
    | `SKIP_ENV_VALIDATION` | **No en prod** | Solo CI sin env real |
 
    **Cómo cargarlas en el dashboard de Vercel:** proyecto → **Settings** → **Environment Variables** → **Add New**. Elegí el nombre exacto de la fila (p. ej. `AUTH_SECRET`), el valor, y marcá en qué entornos aplica (**Production**, **Preview**, **Development**). Para secretos, activá **Sensitive** si tu plan lo ofrece. Guardá y redeployá (o **Redeploy** del último deployment) para que los nuevos valores lleguen al runtime.
@@ -168,7 +174,7 @@ Crear monitor tipo **HTTP(s)** → método **POST** → URL del endpoint. Si la 
 
 ## 7. Verificación manual post-deploy
 
-1. **Login** en `/login` (Google y/o correo) → carga `/tablero`.
+1. **Login** en `/login` (Google y/o correo) → si no hay membresía activa, redirige a **`/onboarding/empresa`**; al completar datos de empresa → **`/tablero`**.
 2. **Tablero** con organización activa y KPIs/listas.
 3. **Export de reporte** (usuario con permiso `reports.export`) desde la UI.
 4. **Job:** `curl` con Bearer (ver arriba) → JSON sin 401/503.

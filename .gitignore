@@ -10,5 +10,5 @@ dist
 .env.*.local
 .DS_Store
 
-# Datos locales de negocio (no versionar)
-Empresa/
+# Datos locales de negocio en la raíz del repo (no versionar). Usar /Empresa/ para no ignorar rutas tipo …/onboarding/empresa/ en Windows (FS case-insensitive).
+/Empresa/

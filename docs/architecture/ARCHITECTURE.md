@@ -126,7 +126,7 @@ Dominio (entidades, invariantes, políticas puras cuando aplique)
     ↓ persisten vía
 Repositorios / persistencia (Prisma en implementación)
     ↓ integran
-Infraestructura (Resend, R2, Auth.js / bootstrap de usuario, jobs)
+Infraestructura (Resend, R2, Auth.js / onboarding e invitaciones, jobs)
 ```
 
 ### 5.2 Dónde vive cada tipo de lógica
@@ -275,7 +275,7 @@ Estructura de alto nivel (App Router). Los nombres son orientativos; la jerarqu�
 | `/configuracion/alertas` | Reglas/config de alertas. |
 | `/configuracion/organizacion` | Datos generales de la empresa (owner). |
 
-Rutas de autenticación en la app: `/login`, `/registro`, `/login/olvidaste`, `/login/restablecer` y callback `/api/auth/*`.
+Rutas de autenticación en la app: `/login`, `/registro`, `/login/olvidaste`, `/login/restablecer` y callback `/api/auth/*`. **Onboarding:** `/onboarding/empresa` (crear organización, rol `owner`). **Invitaciones:** `/invitacion/aceptar` (token en query), API `POST /api/org/invitations` (owner/admin).
 
 ---
 

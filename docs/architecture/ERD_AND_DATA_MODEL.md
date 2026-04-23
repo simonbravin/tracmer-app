@@ -32,7 +32,7 @@
 |---------|------------|
 | **Propósito** | Tenant; agrupa datos y configuración. |
 | **Campos principales** | `id` (UUID/PK), `name`, `legal_name` (opcional), `timezone` (default `America/Argentina/Buenos_Aires` alineado a BR), `created_at`, `updated_at`, `deleted_at` (opcional; si la org se “archiva”, soft delete). |
-| **Relaciones** | 1:N `memberships`, `clients`, `sales`, `collections`, `bank_accounts`, … |
+| **Relaciones** | 1:N `memberships`, `membership_invitations`, `clients`, `sales`, `collections`, `bank_accounts`, … |
 
 ---
 
@@ -42,7 +42,7 @@
 |---------|------------|
 | **Propósito** | Identidad de aplicación enlazada a **Auth.js (NextAuth)** vía Prisma: correo/contraseña (hash en app) y cuentas OAuth (`accounts`). |
 | **Campos principales** | `id`, `email` **UNIQUE**, `name`, `email_verified`, `image`, `password_hash` (nullable si solo OAuth), `display_name`, `avatar_file_id` **PENDIENTE** (FK opcional a `files`), `created_at`, `updated_at`, `deleted_at` (soft delete de perfil en app). |
-| **Relaciones** | 1:N `accounts` (OAuth), `password_reset_tokens`; N:M organizaciones vía `memberships`; actor en `audit_logs`, `report_runs`, etc. |
+| **Relaciones** | 1:N `accounts` (OAuth), `password_reset_tokens`, `membership_invitations` (como invitador); N:M organizaciones vía `memberships`; actor en `audit_logs`, `report_runs`, etc. |
 
 ---
 
@@ -57,13 +57,25 @@
 
 ---
 
+### 2.3.1 membership_invitations
+
+| Aspecto | Definición |
+|---------|------------|
+| **Propósito** | Invitar a un correo **antes** de existir `membership` con `user_id` (Prisma exige `user_id` en `memberships`). Tras aceptar el enlace seguro, se crea `membership` **active** con el `role_id` prefijado (`admin` \| `operativo`; no `owner` vía invitación). |
+| **Campos principales** | `id`, `organization_id` **FK**, `email` (normalizado minúscula), `role_id` **FK → roles**, `token_hash` **UNIQUE**, `expires_at`, `accepted_at` **NULL** hasta uso, `revoked_at` **NULL** hasta revocación, `invited_by_user_id` **FK → users**, `created_at`, `updated_at`. |
+| **Relaciones** | N:1 `organizations`, `roles`, `users` (invitador). |
+| **Reglas** | Token opaco hasheado (misma idea que `password_reset_tokens`); validez recomendada 7 días; al aceptar, marcar `accepted_at` y revocar otras filas pendientes mismo `organization_id` + `email`. |
+| **Índices** | **UNIQUE** `token_hash`; índice `(organization_id, email)` para listados y deduplicación en app. |
+
+---
+
 ### 2.4 roles
 
 | Aspecto | Definición |
 |---------|------------|
 | **Propósito** | Catálogo fijo de roles base (integridad referencial). |
 | **Campos principales** | `id`, `code` **UNIQUE** (`owner`, `admin`, `operativo`), `display_name`, `sort_order`. |
-| **Relaciones** | Referenciado por `memberships`, `organization_role_enabled_modules`, `organization_role_permissions`. |
+| **Relaciones** | Referenciado por `memberships`, `membership_invitations`, `organization_role_enabled_modules`, `organization_role_permissions`. |
 | **Nota** | No hay “roles custom” por org en MVP salvo **PENDIENTE** futuro; solo estos tres códigos. |
 
 ---
@@ -309,6 +321,7 @@ Catálogo `reconciliation_discrepancy_categories`: seed **PENDIENTE** (BR §6.5)
 | Par | Cardinalidad | Tabla puente / nota |
 |-----|--------------|---------------------|
 | `organizations` → `users` | N:M | `memberships` |
+| `organizations` → `membership_invitations` | 1:N | Hasta aceptación o revocación |
 | `sales` → `collections` | N:M | `collection_allocations` |
 | `collections` → `bank_deposits` | N:M | `reconciliation_lines` dentro de `reconciliations` |
 | `sales` → `bank_deposits` | **Ninguna** directa | Solo indirecta vía cobranzas + conciliación (BR §2) |
@@ -367,7 +380,7 @@ Ver §2 por entidad; no repetir aquí salvo aclaración: enums deben alinearse a
 
 ## 7. Permisos (data model) — resolución
 
-1. **Lectura:** sesión Auth.js → `user` (tabla `users`) → `membership` activo para `organization_id` → `role_id`.  
+1. **Lectura:** sesión Auth.js → `user` (tabla `users`) → `membership` activo para `organization_id` → `role_id`. Usuario autenticado **sin** membresía activa entra al flujo de onboarding (`/onboarding/empresa`) hasta crear su org o aceptar invitación.  
 2. Si `owner` → permitir todo (BR §12.3).  
 3. Si no → `organization_role_enabled_modules.is_enabled` y `organization_role_permissions.is_allowed` para la `permission_definition` requerida por la operación.  
 4. **Escritura:** misma evaluación en servidor antes de mutar.
@@ -407,6 +420,7 @@ Ver §2 por entidad; no repetir aquí salvo aclaración: enums deben alinearse a
 | **Unicidad tenant** | `clients.tax_id` **PENDIENTE** único por org si aplica; `sales.invoice_number` **PENDIENTE** único por org si se usa numeración. |
 | **Owner único** | **UNIQUE** parcial o constraint: exactamente una membresía `role=owner` activa por `organization_id`. |
 | **Auth / usuarios** | **UNIQUE** `users.email`; **UNIQUE** `accounts(provider, provider_account_id)` (OAuth). |
+| **Invitaciones** | **UNIQUE** `membership_invitations.token_hash`. |
 | **Membership** | **UNIQUE** `(organization_id, user_id)` filas activas. |
 | **Imputación** | Índice `(collection_id)` y `(sale_id)` en `collection_allocations`. |
 | **Conciliación** | Índice `(collection_id)`, `(bank_deposit_id)`, `(reconciliation_id)` en `reconciliation_lines`. |

@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { signIn } from "next-auth/react";
 
 import { AuthCard } from "@/components/auth/auth-card";
@@ -12,8 +12,22 @@ import { Label } from "@/components/ui/label";
 
 export function RegisterForm({ showGoogle }: { showGoogle: boolean }) {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const callbackUrlRaw = searchParams.get("callbackUrl");
+  const safeAfter =
+    callbackUrlRaw && callbackUrlRaw.startsWith("/") && !callbackUrlRaw.startsWith("//")
+      ? callbackUrlRaw
+      : "/tablero";
+  const inviteEmail = searchParams.get("inviteEmail");
+
   const [name, setName] = React.useState("");
   const [email, setEmail] = React.useState("");
+
+  React.useEffect(() => {
+    if (inviteEmail) {
+      setEmail(inviteEmail);
+    }
+  }, [inviteEmail]);
   const [password, setPassword] = React.useState("");
   const [loading, setLoading] = React.useState(false);
   const [message, setMessage] = React.useState<string | null>(null);
@@ -48,7 +62,7 @@ export function RegisterForm({ showGoogle }: { showGoogle: boolean }) {
         setLoading(false);
         return;
       }
-      router.push("/tablero");
+      router.push(safeAfter);
       router.refresh();
     } catch {
       setMessage("Error de red. Intentá de nuevo.");

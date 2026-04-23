@@ -100,7 +100,7 @@ No sustituye el ERD; solo ancla nombres:
 
 | Área | Entidades |
 |------|-----------|
-| Tenant / auth app | `organizations`, `users`, `accounts`, `memberships`, `roles` |
+| Tenant / auth app | `organizations`, `users`, `accounts`, `memberships`, `membership_invitations`, `roles` |
 | Permisos | `app_modules`, `permission_definitions`, `organization_role_enabled_modules`, `organization_role_permissions` |
 | CRM | `clients`, `client_contacts` |
 | Operación | `sales`, `sale_lines` (evolutivo / política MVP **PENDIENTE**), `collections`, `collection_allocations`, `collection_fees` |
@@ -155,7 +155,7 @@ Tomado de `BUSINESS_RULES.md` §16 y `ERD_AND_DATA_MODEL.md` §13 (lista no exha
 - **`report_saved_filters`**, `job_runs` genérico vs solo `report_runs` (ERD §9, §13).  
 - FK compuesto anti cross-tenant en DB vs solo aplicación (ERD §10).  
 - Estrategia **owner**: bypass sin filas vs grants materializados (ERD §2.5, §13).  
-- Bootstrap de **usuario ↔ org** tras login detallado en layout `(app)` y `ARCHITECTURE.md` §6–7.
+- **Onboarding / invitaciones:** usuario sin membresía activa → `/onboarding/empresa` o aceptación en `/invitacion/aceptar` (ERD §2.3.1); layout `(app)` redirige si falta org.
 
 ---
 

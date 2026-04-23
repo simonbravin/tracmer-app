@@ -7,7 +7,7 @@ import type { AppMembership, AppRequestContext } from "./types";
 
 /**
  * Resolución de “quién” + primera membresía / org (MVP).
- * PENDIENTE: “organización activa” con cookie/segmento, multi-org, matriz de permisos.
+ * PENDIENTE: “organización activa” con cookie/segmento, multi-org; matriz de permisos en otra capa.
  */
 export async function getAppRequestContext(): Promise<AppRequestContext | null> {
   const sessionUserId = await getSessionUserId();

@@ -35,6 +35,7 @@ export default {
         return true;
       }
       if (pathname.startsWith("/api/jobs/run-reports")) return true;
+      if (pathname.startsWith("/invitacion")) return true;
       return !!auth?.user;
     },
     async jwt({ token, user }) {

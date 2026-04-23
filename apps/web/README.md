@@ -14,7 +14,7 @@ La **plantilla** con nombres y comentarios está en la **raíz** del monorepo: [
 | `AUTH_GOOGLE_ID` / `AUTH_GOOGLE_SECRET` | idem (opcionales) | OAuth Google |
 | `RESEND_API_KEY` / `RESEND_FROM` | envío de mails | Obligatorias para “olvidé contraseña” y reportes por mail |
 | `NEXT_PUBLIC_APP_URL` | `getPublicEnv()` | Opcional; enlaces absolutos en cliente |
-| `DEFAULT_ORGANIZATION_NAME` | idem | Opcional: nombre de org en el primer arranque sin orgs |
+| `DEFAULT_ORGANIZATION_NAME` | idem | Opcional (reservado; el nombre de org se define en onboarding) |
 | `SKIP_ENV_VALIDATION` | — | Si `1`, no se aplica Zod estricto; solo CI/build; **no producción** |
 | `CRON_SECRET` | `POST /api/jobs/run-reports` | En producción obligatorio; ruta pública en middleware, protegida por `Authorization: Bearer` |
 
@@ -39,5 +39,5 @@ Este package depende de `@tracmer-app/database` (`workspace:*`). Tras `pnpm inst
 - `src/components/layout/` — shell (sidebar, header, menú móvil)
 - `src/components/ui/` — primitives estilo shadcn
 - `src/lib/env.ts` — validación Zod (servidor y público), `SKIP_ENV_VALIDATION`
-- `src/lib/auth/` — sesión, bootstrap de org, `getAppRequestContext` (pertenencia org/rol); importar en servidor (ver `server.ts` con `server-only`)
+- `src/lib/auth/` — sesión, `getAppRequestContext` (pertenencia org/rol); `src/lib/organization/` — creación de org owner; importar en servidor (ver `server.ts` con `server-only`)
 - `src/lib/tenant.ts` — `getCurrentOrganizationId()` a partir del contexto de app

@@ -342,6 +342,12 @@ Cada alerta tiene: `tipo`, `severidad`, `organization_id`, referencia a entidad,
 - **admin** y **operativo** efectúan solo lo que la matriz permita para su rol.  
 - Cambios en la matriz solo **owner** (salvo política futura explícita).
 
+### 12.4.1 Invitaciones a equipo
+
+- **owner** y **admin** pueden invitar por **correo** con rol destino **`admin`** u **`operativo`** (no se invita `owner`; el único owner por org sigue §12.3).  
+- La invitación se materializa como `membership_invitations` (ERD §2.3.1) hasta que el invitado acepte con el mismo correo y exista `membership` **active**.  
+- Revocar o sustituir invitaciones pendientes del mismo correo en la misma org queda a criterio de implementación (hoy: revocar pendientes al emitir una nueva).
+
 ### 12.5 Intento sin permiso
 
 - El servidor responde **403** (o error de negocio equivalente) y **no** aplica la mutación.  

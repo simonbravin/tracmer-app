@@ -12,7 +12,7 @@ Monorepo **pnpm** — control administrativo-financiero (no TMS). Documentación
 - Plantilla en la **raíz**: [`.env.example`](./.env.example) (sin secretos reales; copiá a `.env` o `.env.local` en la raíz o en `apps/web/`).
 - **Obligatorias** para el flujo autenticado con DB (ver `apps/web/src/lib/env.ts` con Zod): `DATABASE_URL`, `AUTH_SECRET`.
 - **Muy recomendadas en prod:** `AUTH_URL` (URL pública de la app), `RESEND_API_KEY` y `RESEND_FROM` (recuperación de contraseña y correo transaccional).
-- **Opcionales:** `AUTH_GOOGLE_ID` / `AUTH_GOOGLE_SECRET` (OAuth Google), `DEFAULT_ORGANIZATION_NAME` (bootstrap de org).
+- **Opcionales:** `AUTH_GOOGLE_ID` / `AUTH_GOOGLE_SECRET` (OAuth Google), `DEFAULT_ORGANIZATION_NAME` (reservado; onboarding pide nombre en UI).
 - **Solo para CI o build sin conexión real** (no producción): `SKIP_ENV_VALIDATION=1` desactiva la validación estricta; Prisma u otras integraciones pueden fallar luego con su propio error.
 
 ## Primer uso
@@ -53,7 +53,7 @@ Este repo usa **solo** `pnpm-lock.yaml` en la raíz. No commitear `package-lock.
 
 Guía paso a paso (GitHub, Neon, Auth.js, Resend, Vercel, migraciones, **cron del job** y pruebas manuales): **[`docs/deploy/DEPLOY.md`](./docs/deploy/DEPLOY.md)**.
 
-Resumen: `DATABASE_URL`, `AUTH_SECRET`, `AUTH_URL` en prod; `CRON_SECRET` y llamar el job con `Authorization: Bearer …`; Google y Resend según los flujos que habilites. El bootstrap de usuario/org tras login ocurre en el layout de la app autenticada.
+Resumen: `DATABASE_URL`, `AUTH_SECRET`, `AUTH_URL` en prod; `CRON_SECRET` y llamar el job con `Authorization: Bearer …`; Google y Resend según los flujos que habilites. Sin membresía activa, el layout de la app redirige a **`/onboarding/empresa`** para crear la organización.
 
 ---
 

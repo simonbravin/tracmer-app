@@ -1,5 +1,4 @@
 export { getAppRequestContext } from "./app-context";
-export { ensureMembershipBootstrap } from "./bootstrap-user";
 export {
   getSessionUserId,
   requireSessionUserId,
