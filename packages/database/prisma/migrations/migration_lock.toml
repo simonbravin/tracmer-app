@@ -1,0 +1,2 @@
+# Prisma: https://pris.ly/d/migrate#migration_lock
+provider = "postgresql"

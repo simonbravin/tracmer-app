@@ -1,0 +1,17 @@
+{
+  "name": "tracmer-app",
+  "private": true,
+  "packageManager": "pnpm@9.15.4",
+  "scripts": {
+    "dev": "pnpm --filter @tracmer-app/web dev",
+    "build": "pnpm --filter @tracmer-app/web build",
+    "lint": "pnpm --filter @tracmer-app/web lint",
+    "db:generate": "pnpm --filter @tracmer-app/database prisma:generate",
+    "db:validate": "pnpm --filter @tracmer-app/database prisma:validate",
+    "db:migrate:deploy": "pnpm --filter @tracmer-app/database prisma:migrate:deploy"
+  },
+  "engines": {
+    "node": ">=18.18.0",
+    "pnpm": ">=9.0.0"
+  }
+}

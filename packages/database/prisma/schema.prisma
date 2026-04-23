@@ -1,0 +1,740 @@
+// transporte-app — schema inicial (Postgres / Neon)
+// Normativo: docs/ai/AI_CONTEXT.md, docs/architecture/ARCHITECTURE.md,
+// docs/product/BUSINESS_RULES.md, docs/architecture/ERD_AND_DATA_MODEL.md
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// --- enums (cerrados en BR / ERD) ---
+
+enum CurrencyCode {
+  ARS
+  USD
+}
+
+enum SaleStatus {
+  draft
+  issued
+  partially_collected
+  collected
+  overdue
+  cancelled
+}
+
+enum CollectionStatus {
+  valid
+  voided
+}
+
+enum MembershipStatus {
+  active
+  invited
+  suspended
+}
+
+enum ReconciliationStatus {
+  draft
+  closed
+  voided
+}
+
+enum AlertStatus {
+  open
+  acknowledged
+  closed
+}
+
+enum ReportRunStatus {
+  pending
+  running
+  success
+  failed
+}
+
+// --- core / tenant / auth ---
+
+model Organization {
+  id        String    @id @default(cuid())
+  name      String
+  legalName String?   @map("legal_name")
+  timezone  String    @default("America/Argentina/Buenos_Aires")
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+  deletedAt DateTime? @map("deleted_at")
+
+  memberships                    Membership[]
+  clients                        Client[]
+  clientContacts                 ClientContact[]
+  sales                          Sale[]
+  saleLines                      SaleLine[]
+  collections                    Collection[]
+  collectionAllocations          CollectionAllocation[]
+  collectionFees                 CollectionFee[]
+  bankAccounts                   BankAccount[]
+  bankDeposits                   BankDeposit[]
+  bankTransfers                  BankTransfer[]
+  reconciliations                Reconciliation[]
+  reconciliationLines          ReconciliationLine[]
+  reconciliationDiscrepancies    ReconciliationDiscrepancy[]
+  alerts                         Alert[]
+  auditLogs                      AuditLog[]
+  files                          File[]
+  reportDefinitions              ReportDefinition[]
+  reportSchedules                ReportSchedule[]
+  reportRecipients               ReportRecipient[]
+  reportRuns                     ReportRun[]
+  organizationRoleEnabledModules OrganizationRoleEnabledModule[]
+  organizationRolePermissions    OrganizationRolePermission[]
+
+  @@map("organizations")
+}
+
+model User {
+  id           String    @id @default(cuid())
+  clerkUserId  String    @unique @map("clerk_user_id")
+  email        String
+  displayName  String?   @map("display_name")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+  deletedAt    DateTime? @map("deleted_at")
+
+  memberships           Membership[]
+  auditLogs             AuditLog[]             @relation("AuditLogActor")
+  salesCreated          Sale[]                 @relation("SaleCreatedBy")
+  salesUpdated          Sale[]                 @relation("SaleUpdatedBy")
+  clientsCreated        Client[]               @relation("ClientCreatedBy")
+  collectionsCreated    Collection[]         @relation("CollectionCreatedBy")
+  bankDepositsCreated     BankDeposit[]        @relation("BankDepositCreatedBy")
+  bankTransfersCreated    BankTransfer[]       @relation("BankTransferCreatedBy")
+  reconciliationsCreated  Reconciliation[]     @relation("ReconciliationCreatedBy")
+  reconciliationsClosed   Reconciliation[]     @relation("ReconciliationClosedBy")
+  reportDefinitionsCreated ReportDefinition[]  @relation("ReportDefinitionCreatedBy")
+  reportSchedulesCreated   ReportSchedule[]   @relation("ReportScheduleCreatedBy")
+  reportRunsTriggered      ReportRun[]         @relation("ReportRunTriggeredBy")
+  filesUploaded            File[]              @relation("FileUploadedBy")
+
+  @@map("users")
+}
+
+/// Catálogo fijo de roles. Invariante de negocio: a lo sumo una membresía con role.code = owner
+/// por organización — no expresable como constraint nativo en Prisma; ver migración SQL / capa app.
+model Role {
+  id          String   @id @default(cuid())
+  /// Códigos base: owner | admin | operativo (BR §12; catálogo cerrado MVP)
+  code        String   @unique
+  displayName String   @map("display_name")
+  sortOrder   Int      @default(0) @map("sort_order")
+
+  memberships                    Membership[]
+  organizationRoleEnabledModules OrganizationRoleEnabledModule[]
+  organizationRolePermissions    OrganizationRolePermission[]
+
+  @@map("roles")
+}
+
+model Membership {
+  id               String           @id @default(cuid())
+  organizationId String           @map("organization_id")
+  userId           String           @map("user_id")
+  roleId           String           @map("role_id")
+  status           MembershipStatus @default(active)
+  createdAt        DateTime         @default(now()) @map("created_at")
+  updatedAt        DateTime         @updatedAt @map("updated_at")
+  deletedAt        DateTime?        @map("deleted_at")
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role         Role         @relation(fields: [roleId], references: [id], onDelete: Restrict)
+
+  /// Unicidad lógica (activa): `memberships_one_active_user_per_org` en la migración SQL
+  /// (UNIQUE parcial con deleted_at IS NULL). Re-invite tras soft-delete queda habilitado.
+  @@index([organizationId, userId])
+  @@index([organizationId, deletedAt])
+  @@index([organizationId])
+  @@index([userId])
+  @@map("memberships")
+}
+
+model AppModule {
+  id          String  @id @default(cuid())
+  code        String  @unique
+  displayName String  @map("display_name")
+
+  permissionDefinitions            PermissionDefinition[]
+  organizationRoleEnabledModules OrganizationRoleEnabledModule[]
+
+  @@map("app_modules")
+}
+
+model PermissionDefinition {
+  id          String   @id @default(cuid())
+  moduleId    String   @map("module_id")
+  /// view | create | edit | archive | export | send | manage — lista cerrada en producto (BR §12)
+  actionCode  String   @map("action_code")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  module                      AppModule                   @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+  organizationRolePermissions OrganizationRolePermission[]
+  reportDefinitions           ReportDefinition[]
+
+  @@unique([moduleId, actionCode])
+  @@index([moduleId])
+  @@map("permission_definitions")
+}
+
+model OrganizationRoleEnabledModule {
+  id             String   @id @default(cuid())
+  organizationId String   @map("organization_id")
+  roleId         String   @map("role_id")
+  moduleId       String   @map("module_id")
+  isEnabled      Boolean  @default(true) @map("is_enabled")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  role         Role         @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  module       AppModule    @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, roleId, moduleId])
+  @@index([organizationId])
+  @@index([roleId, moduleId])
+  @@map("organization_role_enabled_modules")
+}
+
+model OrganizationRolePermission {
+  id                      String   @id @default(cuid())
+  organizationId        String   @map("organization_id")
+  roleId                String   @map("role_id")
+  permissionDefinitionId String  @map("permission_definition_id")
+  isAllowed             Boolean  @default(true) @map("is_allowed")
+  updatedAt             DateTime @updatedAt @map("updated_at")
+
+  organization         Organization         @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  role                   Role                 @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permissionDefinition   PermissionDefinition @relation(fields: [permissionDefinitionId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, roleId, permissionDefinitionId])
+  @@index([organizationId])
+  @@index([roleId, permissionDefinitionId])
+  @@map("organization_role_permissions")
+}
+
+// --- CRM ---
+
+model Client {
+  id             String    @id @default(cuid())
+  organizationId String    @map("organization_id")
+  legalName      String    @map("legal_name")
+  taxId          String?   @map("tax_id")
+  displayName    String    @map("display_name")
+  notes          String?
+  createdAt      DateTime  @default(now()) @map("created_at")
+  updatedAt      DateTime  @updatedAt @map("updated_at")
+  deletedAt      DateTime? @map("deleted_at")
+  createdByUserId String?  @map("created_by_user_id")
+
+  organization Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  createdBy    User?          @relation("ClientCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
+  contacts     ClientContact[]
+  sales        Sale[]
+
+  @@index([organizationId, deletedAt])
+  @@index([organizationId, taxId])
+  @@map("clients")
+}
+
+model ClientContact {
+  id             String    @id @default(cuid())
+  organizationId String    @map("organization_id")
+  clientId       String    @map("client_id")
+  name           String
+  email          String?
+  phone          String?
+  roleLabel      String?   @map("role_label")
+  createdAt      DateTime  @default(now()) @map("created_at")
+  updatedAt      DateTime  @updatedAt @map("updated_at")
+  deletedAt      DateTime? @map("deleted_at")
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  client       Client       @relation(fields: [clientId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId, deletedAt])
+  @@index([clientId])
+  @@map("client_contacts")
+}
+
+// --- sales / collections ---
+
+model Sale {
+  id                            String        @id @default(cuid())
+  organizationId                String        @map("organization_id")
+  /// Nullable hasta cierre BR §16.12 — supuesto mínimo: permitir null en schema
+  clientId                      String?       @map("client_id")
+  status                        SaleStatus    @default(draft)
+  invoiceDate                   DateTime      @map("invoice_date") @db.Date
+  /// BR §4: días de crédito ≥ 0
+  creditDays                    Int           @default(0) @map("credit_days")
+  currencyCode                  CurrencyCode  @map("currency_code")
+  totalAmount                   Decimal       @map("total_amount") @db.Decimal(18, 4)
+  fxRateArsPerUnitUsdAtIssue    Decimal?      @map("fx_rate_ars_per_unit_usd_at_issue") @db.Decimal(18, 8)
+  amountArsEquivalentAtIssue    Decimal?      @map("amount_ars_equivalent_at_issue") @db.Decimal(18, 4)
+  invoiceNumber                 String?       @map("invoice_number")
+  createdAt                     DateTime      @default(now()) @map("created_at")
+  updatedAt                     DateTime      @updatedAt @map("updated_at")
+  deletedAt                     DateTime?     @map("deleted_at")
+  createdByUserId               String?       @map("created_by_user_id")
+  updatedByUserId               String?       @map("updated_by_user_id")
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  client       Client?      @relation(fields: [clientId], references: [id], onDelete: SetNull)
+  createdBy    User?        @relation("SaleCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
+  updatedBy    User?        @relation("SaleUpdatedBy", fields: [updatedByUserId], references: [id], onDelete: SetNull)
+  lines        SaleLine[]
+  allocations  CollectionAllocation[]
+
+  @@index([organizationId, deletedAt])
+  @@index([organizationId, status])
+  @@index([organizationId, invoiceDate])
+  @@index([clientId])
+  @@map("sales")
+}
+
+model SaleLine {
+  id              String    @id @default(cuid())
+  organizationId  String    @map("organization_id")
+  saleId          String    @map("sale_id")
+  lineNumber      Int       @map("line_number")
+  description     String?
+  quantity        Decimal   @default(1) @db.Decimal(18, 4)
+  unitAmount      Decimal   @map("unit_amount") @db.Decimal(18, 4)
+  lineTotalAmount Decimal   @map("line_total_amount") @db.Decimal(18, 4)
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+  deletedAt       DateTime? @map("deleted_at")
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  sale         Sale         @relation(fields: [saleId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId, deletedAt])
+  @@index([saleId, lineNumber])
+  @@index([saleId])
+  @@map("sale_lines")
+}
+
+model Collection {
+  id                             String           @id @default(cuid())
+  organizationId                 String           @map("organization_id")
+  grossAmount                    Decimal          @map("gross_amount") @db.Decimal(18, 4)
+  currencyCode                   CurrencyCode     @map("currency_code")
+  collectionDate                 DateTime         @map("collection_date") @db.Date
+  /// Catálogo de medios pendiente BR §16.2 — string libre acotado por app
+  paymentMethodCode              String?          @map("payment_method_code")
+  status                         CollectionStatus @default(valid)
+  voidedAt                       DateTime?        @map("voided_at")
+  voidReason                     String?          @map("void_reason")
+  notes                          String?
+  fxRateArsPerUnitUsdAtCollection Decimal?       @map("fx_rate_ars_per_unit_usd_at_collection") @db.Decimal(18, 8)
+  amountArsEquivalent            Decimal?         @map("amount_ars_equivalent") @db.Decimal(18, 4)
+  createdAt                      DateTime         @default(now()) @map("created_at")
+  updatedAt                      DateTime         @updatedAt @map("updated_at")
+  deletedAt                      DateTime?        @map("deleted_at")
+  createdByUserId                String?          @map("created_by_user_id")
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  createdBy    User?        @relation("CollectionCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
+  allocations  CollectionAllocation[]
+  fees         CollectionFee[]
+  reconciliationLines ReconciliationLine[]
+
+  @@index([organizationId, deletedAt])
+  @@index([organizationId, collectionDate])
+  @@index([organizationId, status])
+  @@map("collections")
+}
+
+model CollectionAllocation {
+  id                          String    @id @default(cuid())
+  organizationId            String    @map("organization_id")
+  collectionId              String    @map("collection_id")
+  saleId                    String    @map("sale_id")
+  amountInCollectionCurrency  Decimal @map("amount_in_collection_currency") @db.Decimal(18, 4)
+  /// Tasa de moneda cobranza → moneda venta; misma moneda = 1
+  fxRateToSaleCurrency      Decimal   @map("fx_rate_to_sale_currency") @db.Decimal(18, 8)
+  amountInSaleCurrency      Decimal   @map("amount_in_sale_currency") @db.Decimal(18, 4)
+  createdAt                 DateTime  @default(now()) @map("created_at")
+  updatedAt                 DateTime  @updatedAt @map("updated_at")
+  deletedAt                 DateTime? @map("deleted_at")
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  collection   Collection   @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+  sale         Sale         @relation(fields: [saleId], references: [id], onDelete: Restrict)
+
+  @@index([organizationId, deletedAt])
+  @@index([organizationId, collectionId])
+  @@index([collectionId])
+  @@index([saleId])
+  @@map("collection_allocations")
+}
+
+model CollectionFee {
+  id                       String       @id @default(cuid())
+  organizationId           String       @map("organization_id")
+  collectionId             String       @map("collection_id")
+  amount                   Decimal      @db.Decimal(18, 4)
+  currencyCode             CurrencyCode @map("currency_code")
+  fxRateToCollectionCurrency Decimal    @map("fx_rate_to_collection_currency") @db.Decimal(18, 8)
+  description              String
+  createdAt                DateTime     @default(now()) @map("created_at")
+  updatedAt                DateTime     @updatedAt @map("updated_at")
+  deletedAt                DateTime?    @map("deleted_at")
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  collection   Collection   @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId, deletedAt])
+  @@index([collectionId])
+  @@map("collection_fees")
+}
+
+// --- banking ---
+
+model BankAccount {
+  id                     String       @id @default(cuid())
+  organizationId       String       @map("organization_id")
+  name                   String
+  bankName               String       @map("bank_name")
+  currencyCode           CurrencyCode @map("currency_code")
+  accountIdentifierMasked String      @map("account_identifier_masked")
+  isActive               Boolean      @default(true) @map("is_active")
+  createdAt              DateTime     @default(now()) @map("created_at")
+  updatedAt              DateTime     @updatedAt @map("updated_at")
+  deletedAt              DateTime?    @map("deleted_at")
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  deposits     BankDeposit[]
+  transfersFrom BankTransfer[] @relation("TransferFromAccount")
+  transfersTo   BankTransfer[] @relation("TransferToAccount")
+
+  @@index([organizationId, deletedAt])
+  @@map("bank_accounts")
+}
+
+model BankDeposit {
+  id                          String       @id @default(cuid())
+  organizationId            String       @map("organization_id")
+  bankAccountId             String       @map("bank_account_id")
+  depositDate               DateTime     @map("deposit_date") @db.Date
+  amount                    Decimal      @db.Decimal(18, 4)
+  currencyCode              CurrencyCode @map("currency_code")
+  reference                 String?
+  fxRateArsPerUnitUsdAtDeposit Decimal?  @map("fx_rate_ars_per_unit_usd_at_deposit") @db.Decimal(18, 8)
+  amountArsEquivalent       Decimal?     @map("amount_ars_equivalent") @db.Decimal(18, 4)
+  createdAt                 DateTime     @default(now()) @map("created_at")
+  updatedAt                 DateTime     @updatedAt @map("updated_at")
+  deletedAt                 DateTime?    @map("deleted_at")
+  createdByUserId           String?      @map("created_by_user_id")
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  bankAccount  BankAccount  @relation(fields: [bankAccountId], references: [id], onDelete: Restrict)
+  createdBy    User?        @relation("BankDepositCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
+  reconciliationLines ReconciliationLine[]
+
+  @@index([organizationId, deletedAt])
+  @@index([organizationId, depositDate])
+  @@index([bankAccountId])
+  @@map("bank_deposits")
+}
+
+model BankTransfer {
+  id                 String       @id @default(cuid())
+  organizationId     String       @map("organization_id")
+  fromBankAccountId  String       @map("from_bank_account_id")
+  toBankAccountId    String       @map("to_bank_account_id")
+  transferDate       DateTime     @map("transfer_date") @db.Date
+  amount             Decimal      @db.Decimal(18, 4)
+  currencyCode       CurrencyCode @map("currency_code")
+  feeAmount          Decimal?     @map("fee_amount") @db.Decimal(18, 4)
+  notes              String?
+  createdAt          DateTime     @default(now()) @map("created_at")
+  updatedAt          DateTime     @updatedAt @map("updated_at")
+  deletedAt          DateTime?    @map("deleted_at")
+  createdByUserId    String?      @map("created_by_user_id")
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  fromAccount  BankAccount  @relation("TransferFromAccount", fields: [fromBankAccountId], references: [id], onDelete: Restrict)
+  toAccount    BankAccount  @relation("TransferToAccount", fields: [toBankAccountId], references: [id], onDelete: Restrict)
+  createdBy    User?        @relation("BankTransferCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
+
+  @@index([organizationId, deletedAt])
+  @@index([organizationId, transferDate])
+  @@index([fromBankAccountId])
+  @@index([toBankAccountId])
+  @@map("bank_transfers")
+}
+
+// --- reconciliation ---
+
+model Reconciliation {
+  id              String               @id @default(cuid())
+  organizationId  String               @map("organization_id")
+  status          ReconciliationStatus @default(draft)
+  closedAt        DateTime?            @map("closed_at")
+  notes           String?
+  createdAt       DateTime             @default(now()) @map("created_at")
+  updatedAt       DateTime             @updatedAt @map("updated_at")
+  deletedAt       DateTime?            @map("deleted_at")
+  createdByUserId String?              @map("created_by_user_id")
+  closedByUserId  String?              @map("closed_by_user_id")
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  createdBy    User?        @relation("ReconciliationCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
+  closedBy     User?        @relation("ReconciliationClosedBy", fields: [closedByUserId], references: [id], onDelete: SetNull)
+  lines        ReconciliationLine[]
+  discrepancies ReconciliationDiscrepancy[]
+
+  @@index([organizationId, deletedAt])
+  @@index([organizationId, status])
+  @@map("reconciliations")
+}
+
+model ReconciliationLine {
+  id                          String    @id @default(cuid())
+  organizationId            String    @map("organization_id")
+  reconciliationId        String    @map("reconciliation_id")
+  collectionId            String    @map("collection_id")
+  bankDepositId             String    @map("bank_deposit_id")
+  /// Monto aplicado desde la cobranza (moneda de la cobranza salvo política BR §16.4 cerrada)
+  amountAppliedFromCollection Decimal @map("amount_applied_from_collection") @db.Decimal(18, 4)
+  /// Monto aplicado al depósito (moneda del depósito)
+  amountAppliedToDeposit    Decimal   @map("amount_applied_to_deposit") @db.Decimal(18, 4)
+  fxRateReconciliation      Decimal?  @map("fx_rate_reconciliation") @db.Decimal(18, 8)
+  createdAt                 DateTime  @default(now()) @map("created_at")
+  updatedAt                 DateTime  @updatedAt @map("updated_at")
+  deletedAt                 DateTime? @map("deleted_at")
+
+  organization   Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  reconciliation Reconciliation @relation(fields: [reconciliationId], references: [id], onDelete: Cascade)
+  collection     Collection     @relation(fields: [collectionId], references: [id], onDelete: Restrict)
+  bankDeposit    BankDeposit    @relation(fields: [bankDepositId], references: [id], onDelete: Restrict)
+  discrepancies  ReconciliationDiscrepancy[]
+
+  @@index([organizationId])
+  @@index([reconciliationId])
+  @@index([collectionId])
+  @@index([bankDepositId])
+  @@map("reconciliation_lines")
+}
+
+model ReconciliationDiscrepancy {
+  id                   String   @id @default(cuid())
+  organizationId     String   @map("organization_id")
+  reconciliationId   String   @map("reconciliation_id")
+  reconciliationLineId String? @map("reconciliation_line_id")
+  /// FK a catálogo de categorías pendiente BR — código estable acordado por app
+  categoryCode         String   @map("category_code")
+  amount               Decimal  @db.Decimal(18, 4)
+  currencyCode         CurrencyCode @map("currency_code")
+  notes                String?
+  createdAt            DateTime @default(now()) @map("created_at")
+
+  organization   Organization        @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  reconciliation Reconciliation      @relation(fields: [reconciliationId], references: [id], onDelete: Cascade)
+  line           ReconciliationLine? @relation(fields: [reconciliationLineId], references: [id], onDelete: SetNull)
+
+  @@index([organizationId])
+  @@index([reconciliationId])
+  @@map("reconciliation_discrepancies")
+}
+
+// --- cross-cutting ---
+
+model Alert {
+  id             String      @id @default(cuid())
+  organizationId String      @map("organization_id")
+  /// invoice_overdue | collection_missing_docs | collection_not_deposited | fx_deviation | inconsistency — extensible por app (BR §11)
+  type           String
+  severity       String
+  entityType     String      @map("entity_type")
+  entityId       String      @map("entity_id")
+  status         AlertStatus @default(open)
+  createdAt      DateTime    @default(now()) @map("created_at")
+  acknowledgedAt DateTime? @map("acknowledged_at")
+  closedAt       DateTime?   @map("closed_at")
+  payload        Json?
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId, status])
+  @@index([organizationId, createdAt])
+  @@index([entityType, entityId])
+  @@map("alerts")
+}
+
+/// Append-only: sin deletedAt. actorUserId obligatorio (BR §15).
+model AuditLog {
+  id             String    @id @default(cuid())
+  organizationId String?   @map("organization_id")
+  actorUserId    String    @map("actor_user_id")
+  action         String
+  entityType     String    @map("entity_type")
+  entityId       String?   @map("entity_id")
+  occurredAt     DateTime  @default(now()) @map("occurred_at")
+  payload        Json?
+  ipAddress      String?   @map("ip_address")
+  userAgent      String?   @map("user_agent")
+
+  organization Organization? @relation(fields: [organizationId], references: [id], onDelete: SetNull)
+  actor          User          @relation("AuditLogActor", fields: [actorUserId], references: [id], onDelete: Restrict)
+
+  @@index([organizationId, occurredAt])
+  @@index([entityType, entityId, occurredAt])
+  @@index([actorUserId])
+  @@map("audit_logs")
+}
+
+model File {
+  id               String    @id @default(cuid())
+  organizationId   String    @map("organization_id")
+  storageKey       String    @unique @map("storage_key")
+  originalFilename String    @map("original_filename")
+  mimeType         String    @map("mime_type")
+  sizeBytes        BigInt    @map("size_bytes")
+  sha256           String?
+  linkedEntityType String    @map("linked_entity_type")
+  linkedEntityId   String    @map("linked_entity_id")
+  createdAt        DateTime  @default(now()) @map("created_at")
+  deletedAt        DateTime? @map("deleted_at")
+  uploadedByUserId String?   @map("uploaded_by_user_id")
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  uploadedBy   User?        @relation("FileUploadedBy", fields: [uploadedByUserId], references: [id], onDelete: SetNull)
+  reportRuns   ReportRun[]
+
+  @@index([organizationId, deletedAt])
+  @@index([linkedEntityType, linkedEntityId])
+  @@map("files")
+}
+
+// --- reporting ---
+
+model ReportDefinition {
+  id                         String   @id @default(cuid())
+  organizationId           String   @map("organization_id")
+  code                       String
+  name                       String
+  /// Tipo de reporte — catálogo producto pendiente; string acotado por app
+  reportType                 String   @map("report_type")
+  requiredPermissionDefinitionId String? @map("required_permission_definition_id")
+  defaultParameters          Json?    @map("default_parameters")
+  createdAt                  DateTime @default(now()) @map("created_at")
+  updatedAt                  DateTime @updatedAt @map("updated_at")
+  deletedAt                  DateTime? @map("deleted_at")
+  createdByUserId            String?  @map("created_by_user_id")
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  createdBy    User?        @relation("ReportDefinitionCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
+  requiredPermission PermissionDefinition? @relation(fields: [requiredPermissionDefinitionId], references: [id], onDelete: SetNull)
+  schedules    ReportSchedule[]
+  runs         ReportRun[]
+
+  @@unique([organizationId, code])
+  @@index([organizationId, deletedAt])
+  @@map("report_definitions")
+}
+
+model ReportSchedule {
+  id                 String   @id @default(cuid())
+  organizationId   String   @map("organization_id")
+  reportDefinitionId String @map("report_definition_id")
+  cronExpression     String   @map("cron_expression")
+  timezone           String
+  isActive           Boolean  @default(true) @map("is_active")
+  parametersOverride Json?    @map("parameters_override")
+  createdAt          DateTime @default(now()) @map("created_at")
+  updatedAt          DateTime @updatedAt @map("updated_at")
+  deletedAt          DateTime? @map("deleted_at")
+  createdByUserId    String?  @map("created_by_user_id")
+
+  organization     Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  reportDefinition ReportDefinition @relation(fields: [reportDefinitionId], references: [id], onDelete: Cascade)
+  createdBy        User?            @relation("ReportScheduleCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
+  recipients       ReportRecipient[]
+  runs             ReportRun[]
+
+  @@index([organizationId, deletedAt])
+  @@index([reportDefinitionId])
+  @@map("report_schedules")
+}
+
+model ReportRecipient {
+  id               String    @id @default(cuid())
+  organizationId String    @map("organization_id")
+  reportScheduleId String  @map("report_schedule_id")
+  email            String
+  name             String?
+  createdAt        DateTime  @default(now()) @map("created_at")
+  deletedAt        DateTime? @map("deleted_at")
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  schedule     ReportSchedule @relation(fields: [reportScheduleId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId, deletedAt])
+  @@index([reportScheduleId])
+  @@map("report_recipients")
+}
+
+model ReportRun {
+  id                 String           @id @default(cuid())
+  organizationId     String           @map("organization_id")
+  reportDefinitionId String           @map("report_definition_id")
+  reportScheduleId   String?          @map("report_schedule_id")
+  status               ReportRunStatus @default(pending)
+  startedAt          DateTime?        @map("started_at")
+  finishedAt         DateTime?        @map("finished_at")
+  errorMessage       String?          @map("error_message")
+  outputFileId       String?          @map("output_file_id")
+  triggeredByUserId  String?          @map("triggered_by_user_id")
+  idempotencyKey     String?          @map("idempotency_key")
+
+  organization     Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  reportDefinition ReportDefinition @relation(fields: [reportDefinitionId], references: [id], onDelete: Restrict)
+  schedule         ReportSchedule?  @relation(fields: [reportScheduleId], references: [id], onDelete: SetNull)
+  outputFile       File?            @relation(fields: [outputFileId], references: [id], onDelete: SetNull)
+  triggeredBy      User?            @relation("ReportRunTriggeredBy", fields: [triggeredByUserId], references: [id], onDelete: SetNull)
+
+  @@index([organizationId, status])
+  @@index([reportDefinitionId])
+  @@index([reportScheduleId])
+  @@map("report_runs")
+}
+
+// -----------------------------------------------------------------------------
+// Supuestos tomados en este schema (opción mínima segura; ver BR/ERD PENDIENTE)
+// -----------------------------------------------------------------------------
+// - IDs: cuid() en todas las entidades con @id.
+// - Decimal(18,4) para montos; Decimal(18,8) para tasas FX; BigInt para sizeBytes.
+// - Sale.clientId nullable hasta cierre BR §16.12 (ERD).
+// - Sale.status incluye overdue persistido (alternativa calculada PENDIENTE en producto).
+// - Sale.creditDays @default(0) (BR §4 int ≥ 0).
+// - SaleLine presente aunque MVP pueda usar solo Sale.totalAmount (ERD §2.9).
+// - Membresía: índice único parcial + trigger `membership_enforce_single_active_owner` (migración `20260422120000_init`).
+// - payment_method_code, category_code de discrepancias, report_type, alert.type: String acotada por app (catálogos PENDIENTES).
+// - ReconciliationDiscrepancy sin soft delete (ERD: created_at only).
+// - ReportSchedule.saved_filter_id omitido (tabla report_saved_filters PENDIENTE en ERD).
+// - ReportRun.idempotency_key: unique parcial en SQL (migración `20260422120000_init`); no @@unique en Prisma.
+// - Catálogos Role / AppModule / PermissionDefinition sin deletedAt (ERD §11).
+// - AuditLog sin deletedAt; organizationId nullable (ERD).
+// - ReportRecipient.organizationId denormalizado requerido por ERD; mantiene integridad referencial con Organization.
+//
+// -----------------------------------------------------------------------------
+// Pendientes que siguen fuera (o solo parcial en SQL; ver migración `20260422120000_init`)
+// -----------------------------------------------------------------------------
+// - CHECKs: sum(collection_allocations) ≤ gross_amount; líneas conciliación ≤ depósito/cobranza (PENDIENTE, flexibilidad).
+// - FK compuesto (id, organization_id) anti cross-tenant en tablas hijas (opción ERD §13).
+// - Filtros guardados (report_saved_filters) y catálogos pendientes BR.
+// - Tolerancia numérica y redondeo (BR §16.5).

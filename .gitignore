@@ -1,0 +1,14 @@
+node_modules
+.pnpm-store
+.next
+out
+dist
+.turbo
+*.log
+.env
+.env.local
+.env.*.local
+.DS_Store
+
+# Datos locales de negocio (no versionar)
+Empresa/

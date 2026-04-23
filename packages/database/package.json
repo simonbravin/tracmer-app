@@ -1,0 +1,33 @@
+{
+  "name": "@tracmer-app/database",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Prisma schema and client for tracmer-app (Postgres / Neon).",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    }
+  },
+  "scripts": {
+    "prisma:generate": "prisma generate",
+    "prisma:validate": "prisma validate",
+    "prisma:migrate:dev": "prisma migrate dev",
+    "prisma:migrate:deploy": "prisma migrate deploy",
+    "prisma:migrate:status": "prisma migrate status",
+    "prisma:studio": "prisma studio"
+  },
+  "dependencies": {
+    "@prisma/client": "^5.22.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.14.0",
+    "prisma": "^5.22.0",
+    "typescript": "^5.5.0"
+  },
+  "engines": {
+    "node": ">=18.18.0"
+  }
+}

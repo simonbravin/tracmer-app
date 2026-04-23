@@ -1,0 +1,24 @@
+# tracmer-app — reglas Cursor
+
+Normativo: `docs/ai/AI_CONTEXT.md`, `docs/architecture/ARCHITECTURE.md`, `docs/product/BUSINESS_RULES.md`, `docs/architecture/ERD_AND_DATA_MODEL.md`. Skills: `docs/ai/skills/*.md`.
+
+1. Antes de cambios grandes o de dominio, leé esos docs; no improvises lo que ya está definido o marcado PENDIENTE.
+2. No inventes features ni alcance fuera de MVP/producto explícito.
+3. No es TMS: nada de rutas, flota, dispatch, GPS, ejecución logística.
+4. No dupliques componentes, estilos, tablas, formularios ni lógica de negocio.
+5. UI: patrones compartidos y `packages/ui` (tablas, forms, filtros, modales); extendé ahí, no por página suelta.
+6. Multi-tenant: todo dato de negocio con `organization_id`; queries/mutaciones siempre scoped en backend.
+7. Permisos e invariantes sensibles: solo en backend (Server Actions / API / jobs). UI no es seguridad.
+8. No hard-delete en entidades sensibles: soft delete + estados (BR/ERD).
+9. No pongas lógica financiera definitiva (montos, FX, conciliación, estados de venta) solo en el cliente.
+10. Si la regla está PENDIENTE en docs, no inventes: marcá PENDIENTE o pedí cierre.
+11. Cambios chicos y revisables; no toques carpetas/archivos ajenos al pedido.
+12. Si falta definición: supuesto mínimo seguro + una línea de documentación (PR o comentario acotado).
+13. Copy UI y emails: español (Argentina); sin i18n en MVP.
+14. Light/dark desde el inicio; colores/espaciado vía tokens compartidos, no CSS one-off.
+15. Clerk: autenticación e identidad; permisos de negocio = app (matriz persistida), no Clerk.
+16. Archivos R2: metadata en DB; descarga con URL firmada corta desde backend; sin buckets públicos de lectura.
+17. Exportes y reportes programados son parte real del MVP; no posponerlos “para después” sin decisión explícita.
+18. Validación: schemas compartidos (`packages/validators`); misma regla en cliente y servidor, invariantes en servidor.
+19. No contradigas arquitectura / BR / ERD entre sí al codificar; si detectás conflicto entre docs, no asumas: reportalo.
+20. Objetivo del producto: facturado → cobrado → depositado → conciliado, con trazabilidad y FX persistido.
