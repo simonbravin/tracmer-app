@@ -11,7 +11,7 @@ import { cn } from "@/lib/utils";
 
 const flatLinks = appNavigation.flatMap((s) => s.links);
 
-export function MobileNav() {
+export function MobileNav({ organizationDisplayName }: { organizationDisplayName: string }) {
   const [open, setOpen] = React.useState(false);
   const pathname = usePathname();
 
@@ -46,7 +46,10 @@ export function MobileNav() {
             id="mobile-nav-panel"
             className="absolute left-0 top-0 flex h-full w-[min(20rem,88vw)] flex-col gap-2 overflow-y-auto border-r bg-sidebar p-3 text-sidebar-foreground shadow-lg"
           >
-            <div className="text-sm font-semibold">Navegación</div>
+            <div className="min-w-0 space-y-0.5 border-b border-sidebar-border pb-2">
+              <div className="truncate text-sm font-semibold">{organizationDisplayName}</div>
+              <div className="text-muted-foreground text-xs">Navegación</div>
+            </div>
             <ul className="space-y-1">
               {flatLinks.map((link) => {
                 const active =

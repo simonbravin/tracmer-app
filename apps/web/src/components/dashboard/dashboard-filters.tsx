@@ -6,6 +6,7 @@ import { useCallback, useEffect, useState, useTransition } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { SegmentToggleButtons } from "@/components/ui/segment-toggle-buttons";
 import { cn } from "@/lib/utils";
 
 import type { PeriodoPreset } from "@/lib/dashboard/validation";
@@ -72,36 +73,27 @@ export function DashboardFilters({
           pushParams(sp);
         }}
       >
-        <div className="flex flex-wrap gap-2">
-          {(
-            [
-              ["mes", "Este mes"],
-              ["anio", "Este año"],
-              ["custom", "Personalizado"],
-            ] as const
-          ).map(([k, label]) => (
-            <Button
-              key={k}
-              type="button"
-              variant={periodo === k ? "default" : "secondary"}
-              size="sm"
-              onClick={() => {
-                setPeriodo(k);
-                const sp = new URLSearchParams();
-                if (k !== "mes") sp.set("periodo", k);
-                if (k === "custom") {
-                  sp.set("desde", defaultDesde || rangeDesde);
-                  sp.set("hasta", defaultHasta || rangeHasta);
-                }
-                if (defaultCliente) sp.set("cliente", defaultCliente);
-                if (defaultQ) sp.set("q", defaultQ);
-                pushParams(sp);
-              }}
-            >
-              {label}
-            </Button>
-          ))}
-        </div>
+        <SegmentToggleButtons<PeriodoPreset>
+          aria-label="Período del tablero"
+          items={[
+            { value: "mes", label: "Este mes" },
+            { value: "anio", label: "Este año" },
+            { value: "custom", label: "Personalizado" },
+          ]}
+          value={periodo}
+          onValueChange={(k) => {
+            setPeriodo(k);
+            const sp = new URLSearchParams();
+            if (k !== "mes") sp.set("periodo", k);
+            if (k === "custom") {
+              sp.set("desde", defaultDesde || rangeDesde);
+              sp.set("hasta", defaultHasta || rangeHasta);
+            }
+            if (defaultCliente) sp.set("cliente", defaultCliente);
+            if (defaultQ) sp.set("q", defaultQ);
+            pushParams(sp);
+          }}
+        />
 
         <div className="text-muted-foreground text-xs">
           Rango: {rangeDesde} → {rangeHasta}. Facturación: fecha de factura. Cobranzas/dep.: fecha de documento. Conciliaciones:{" "}

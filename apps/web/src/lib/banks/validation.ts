@@ -91,4 +91,45 @@ export function parseBankDepositForm(raw: ReturnType<typeof formDataToObject>) {
   });
 }
 
+const transferBase = z.object({
+  fromBankAccountId: z.string().cuid("Elegí cuenta origen"),
+  toBankAccountId: z.string().cuid("Elegí cuenta destino"),
+  transferDate: z.string().min(1, "Elegí la fecha"),
+  amount: decimalLike,
+  feeAmount: optionalDecimal,
+  notes: z
+    .string()
+    .max(2000)
+    .optional()
+    .transform((v) => (v == null || v.trim() === "" ? undefined : v.trim())),
+});
+
+export const bankTransferFormSchema = transferBase.superRefine((d, ctx) => {
+  if (d.fromBankAccountId === d.toBankAccountId) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "La cuenta destino debe ser distinta del origen",
+      path: ["toBankAccountId"],
+    });
+  }
+  const f = d.feeAmount;
+  if (f != null && f !== "") {
+    const n = new Prisma.Decimal(String(f).replace(",", ".").trim());
+    if (n.lt(0)) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message: "La comisión no puede ser negativa", path: ["feeAmount"] });
+    }
+  }
+});
+
+export function parseBankTransferForm(raw: ReturnType<typeof formDataToObject>) {
+  return bankTransferFormSchema.safeParse({
+    fromBankAccountId: raw.fromBankAccountId,
+    toBankAccountId: raw.toBankAccountId,
+    transferDate: raw.transferDate,
+    amount: raw.amount,
+    feeAmount: raw.feeAmount,
+    notes: raw.notes,
+  });
+}
+
 export { formDataToObject };

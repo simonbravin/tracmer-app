@@ -92,6 +92,7 @@ model Organization {
   organizationRoleEnabledModules OrganizationRoleEnabledModule[]
   organizationRolePermissions    OrganizationRolePermission[]
   membershipInvitations          MembershipInvitation[]
+  alertSettings                  OrganizationAlertSettings?
 
   @@map("organizations")
 }
@@ -653,6 +654,26 @@ model Alert {
   @@index([organizationId, createdAt])
   @@index([entityType, entityId])
   @@map("alerts")
+}
+
+/// Preferencias de notificación por email por organización; el envío lo dispara `POST /api/jobs/run-alert-emails` (1/día UTC máx.).
+model OrganizationAlertSettings {
+  id              String   @id @default(cuid())
+  organizationId  String   @unique @map("organization_id")
+  /// Si true y hay destinatarios, el job de email puede notificar (tipos en `emailAlertTypes` o todos si null).
+  emailEnabled    Boolean  @default(false) @map("email_enabled")
+  /// Emails separados por coma, punto y coma o salto de línea.
+  emailRecipients String?  @map("email_recipients") @db.Text
+  /// `string[]` JSON: códigos de `Alert.type` a incluir; null/empty = todos los tipos conocidos.
+  emailAlertTypes         Json?     @map("email_alert_types")
+  /// Último envío del resumen diario (UTC) por job; evita duplicados el mismo día.
+  lastAlertEmailDigestAt DateTime? @map("last_alert_email_digest_at")
+  createdAt                DateTime  @default(now()) @map("created_at")
+  updatedAt                DateTime  @updatedAt @map("updated_at")
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@map("organization_alert_settings")
 }
 
 /// Append-only: sin deletedAt. actorUserId obligatorio (BR §15).

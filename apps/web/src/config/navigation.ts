@@ -74,7 +74,7 @@ export const appNavigation: NavSection[] = [
       { title: "Perfil", href: "/configuracion/perfil", icon: UserCircle },
       { title: "Equipo", href: "/configuracion/equipo", icon: UsersRound },
       { title: "Módulos y permisos", href: "/configuracion/permisos", icon: Shield },
-      { title: "Reglas de alertas (futuro)", href: "/configuracion/alertas", icon: SlidersHorizontal },
+      { title: "Reglas de alertas", href: "/configuracion/alertas", icon: SlidersHorizontal },
       { title: "Organización", href: "/configuracion/organizacion", icon: Building2 },
     ],
   },

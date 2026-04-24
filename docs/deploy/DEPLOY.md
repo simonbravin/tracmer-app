@@ -170,6 +170,38 @@ Secrets en el repo: `REPORTS_JOB_URL` = `https://tu-dominio.com/api/jobs/run-rep
 
 Crear monitor tipo **HTTP(s)** → método **POST** → URL del endpoint. Si la herramienta **permite header personalizado**, agregar `Authorization: Bearer …`. Si **no** permite Bearer, ese producto no sirve para este endpoint sin un proxy intermedio.
 
+### Qué es “cron” (si usás Windows)
+
+**Cron** es el nombre tradicional (Linux) de “tarea que se repite a horario fijo”. No tenés que instalar nada en Windows: el horario se define en **GitHub Actions** (`on: schedule`), en **Vercel Cron**, o en otro servicio que haga un `POST` a tu URL. En tu PC solo podés **probar a mano** (PowerShell + `Invoke-WebRequest` o `curl` con el header `Authorization`).
+
+---
+
+## 6b. Job de resumen de alertas por email: `POST /api/jobs/run-alert-emails`
+
+### Qué hace
+
+Recorre las organizaciones con **notificaciones por email** activas y al menos un destinatario, arma el mismo listado de alertas abiertas que la app (vencimientos, cobranzas, etc.) y, si aplica, envía **un correo de resumen por Resend**. Reglas:
+
+- **Cómo mucho un envío por organización y por día (calendario UTC)** aunque el job se ejecute varias veces; se guarda `last_alert_email_digest_at` en `organization_alert_settings`.
+- Si no hay alertas que coincidan con los **tipos** elegidos en Configuración → Reglas de alertas, no se manda mail (y no se “gasta” el cupo del día).
+- Misma autenticación que el job de reportes: `Authorization: Bearer <CRON_SECRET>`. En prod sin `CRON_SECRET` → **503**.
+
+### Cómo llamarlo
+
+Reemplazá `BASE` y `TU_SECRETO`:
+
+```bash
+curl -X POST "https://BASE/api/jobs/run-alert-emails" \
+  -H "Authorization: Bearer TU_SECRETO" \
+  -H "Content-Type: application/json"
+```
+
+**Frecuencia recomendada:** una vez al día (por ejemplo `0 8 * * *` en UTC = 08:00 UTC) o cada hora si preferís: el tope “1 por día” evita duplicar correos.
+
+### Programador (mismo patrón que reportes)
+
+Podés reutilizar el workflow de GitHub Actions con otra URL en secrets, p. ej. `ALERTS_JOB_URL` = `https://tu-dominio.com/api/jobs/run-alert-emails` y el mismo `CRON_SECRET`.
+
 ---
 
 ## 7. Verificación manual post-deploy
@@ -177,8 +209,9 @@ Crear monitor tipo **HTTP(s)** → método **POST** → URL del endpoint. Si la 
 1. **Login** en `/login` (Google y/o correo) → si no hay membresía activa, redirige a **`/onboarding/empresa`**; al completar datos de empresa → **`/tablero`**.
 2. **Tablero** con organización activa y KPIs/listas.
 3. **Export de reporte** (usuario con permiso `reports.export`) desde la UI.
-4. **Job:** `curl` con Bearer (ver arriba) → JSON sin 401/503.
-5. **Mail:** si Resend está configurado y hay schedules con destinatarios en ventana, revisar bandeja (y logs de Resend).
+4. **Job reportes:** `curl` a `run-reports` con Bearer → JSON sin 401/503.
+5. **Job alertas (opcional):** `curl` a `run-alert-emails` con Bearer → JSON con `sent` / `skipped` / `no_alerts` (y Resend si hay orgs con email activo y alertas abiertas).
+6. **Mail (reportes programados):** si Resend está configurado y hay schedules con destinatarios en ventana, revisar bandeja (y logs de Resend).
 
 ---
 
@@ -188,4 +221,5 @@ Crear monitor tipo **HTTP(s)** → método **POST** → URL del endpoint. Si la 
 - Validación estricta al entrar a la app: [`apps/web/src/lib/env.ts`](../../apps/web/src/lib/env.ts)
 - Middleware (Auth.js, rutas públicas): [`apps/web/src/middleware.ts`](../../apps/web/src/middleware.ts)
 - Auth: [`apps/web/src/auth.ts`](../../apps/web/src/auth.ts), [`apps/web/src/auth.config.ts`](../../apps/web/src/auth.config.ts)
-- Job: [`apps/web/src/app/api/jobs/run-reports/route.ts`](../../apps/web/src/app/api/jobs/run-reports/route.ts)
+- Job reportes: [`apps/web/src/app/api/jobs/run-reports/route.ts`](../../apps/web/src/app/api/jobs/run-reports/route.ts)
+- Job alertas (email): [`apps/web/src/app/api/jobs/run-alert-emails/route.ts`](../../apps/web/src/app/api/jobs/run-alert-emails/route.ts)

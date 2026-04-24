@@ -35,7 +35,7 @@ export default {
       if (pathname.startsWith("/login") || pathname.startsWith("/registro")) {
         return true;
       }
-      if (pathname.startsWith("/api/jobs/run-reports")) return true;
+      if (pathname.startsWith("/api/jobs/")) return true;
       if (pathname.startsWith("/invitacion")) return true;
       return !!auth?.user;
     },

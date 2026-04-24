@@ -15,7 +15,7 @@ const serverSchema = z.object({
   AUTH_URL: z.string().optional().default(""),
   AUTH_GOOGLE_ID: z.string().optional().default(""),
   AUTH_GOOGLE_SECRET: z.string().optional().default(""),
-  /** Solo requerida para “olvidé contraseña” y otros mails transaccionales. */
+  /** Solo requerida para "olvidé contraseña" y otros mails transaccionales. */
   RESEND_API_KEY: z.string().optional().default(""),
   RESEND_FROM: z.string().optional().default(""),
   /** Reservado (onboarding en UI); puede usarse como default futuro. */

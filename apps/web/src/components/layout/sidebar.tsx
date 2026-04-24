@@ -23,7 +23,7 @@ import { cn } from "@/lib/utils";
 
 const flatLinks = appNavigation.flatMap((s) => s.links);
 
-export function Sidebar() {
+export function Sidebar({ organizationDisplayName }: { organizationDisplayName: string }) {
   const pathname = usePathname();
   const { collapsed, toggleCollapsed } = useSidebarLayout();
 
@@ -38,7 +38,16 @@ export function Sidebar() {
     return (
       <aside className="hidden w-[4.25rem] shrink-0 flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground md:flex">
         <div className="flex h-14 shrink-0 flex-col items-center justify-center gap-0.5 border-b border-sidebar-border px-1 py-1">
-          <Truck className="h-6 w-6 text-primary" aria-hidden />
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <span className="flex h-9 w-9 cursor-default items-center justify-center rounded-md">
+                <Truck className="h-6 w-6 text-primary" aria-hidden />
+              </span>
+            </TooltipTrigger>
+            <TooltipContent side="right" className="max-w-[14rem]">
+              <span className="font-medium">{organizationDisplayName}</span>
+            </TooltipContent>
+          </Tooltip>
           <Button
             type="button"
             variant="ghost"
@@ -85,9 +94,7 @@ export function Sidebar() {
         <div className="flex min-w-0 flex-1 items-center gap-2">
           <Truck className="h-6 w-6 shrink-0 text-primary" aria-hidden />
           <div className="min-w-0">
-            <div className="truncate text-sm font-semibold leading-tight">
-              tracmer-app
-            </div>
+            <div className="truncate text-sm font-semibold leading-tight">{organizationDisplayName}</div>
             <div className="truncate text-xs text-muted-foreground">
               Control administrativo
             </div>

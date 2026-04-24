@@ -8,16 +8,20 @@ import { NavCommandMenu } from "@/components/layout/nav-command-menu";
 import { useSidebarLayout } from "@/components/layout/sidebar-layout-context";
 import { ThemeToggle } from "@/components/layout/theme-toggle";
 import { UserNav } from "@/components/layout/user-nav";
+
+type AppShellHeaderProps = {
+  organizationDisplayName: string;
+};
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 
-export function AppShellHeader() {
+export function AppShellHeader({ organizationDisplayName }: AppShellHeaderProps) {
   const { collapsed, toggleCollapsed } = useSidebarLayout();
 
   return (
     <header className="flex h-14 shrink-0 items-center gap-2 border-b border-border/80 bg-background px-3 md:gap-3 md:px-5">
       <div className="flex min-w-0 flex-1 items-center gap-2 md:gap-3">
-        <MobileNav />
+        <MobileNav organizationDisplayName={organizationDisplayName} />
         <Button
           type="button"
           variant="ghost"

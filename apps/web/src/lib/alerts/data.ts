@@ -293,13 +293,46 @@ async function rowsFromClosedDb(organizationId: string, q: ListAlertsQuery): Pro
   });
 }
 
+/**
+ * Misma lógica que el listado “activas” (incl. derivadas) sin tope de página;
+ * un solo cálculo. Uso: jobs (digest email).
+ */
+export async function listAllActiveMergedAlertRows(organizationId: string): Promise<AlertListRow[]> {
+  const { latestByKey: stored, firstCreated } = await loadAlertAggregates(organizationId);
+  const computed = await buildActiveComputedAlerts(organizationId);
+  const rows: AlertListRow[] = [];
+  for (const c of computed) {
+    const k = keyOf(c.type, c.entityType, c.entityId);
+    const st = stored.get(k);
+    if (st?.status === "closed") continue;
+    const status: AlertStatus = st?.status ?? "open";
+    const created = st ? (firstCreated.get(k) ?? c.sortAt) : c.sortAt;
+    rows.push({
+      key: k,
+      derived: !st,
+      dbId: st?.id ?? null,
+      type: c.type,
+      severity: c.severity,
+      status,
+      title: c.title,
+      detail: c.detail,
+      href: c.href,
+      sortAt: c.sortAt,
+      createdAt: created,
+      entityType: c.entityType,
+      entityId: c.entityId,
+    });
+  }
+  rows.sort((a, b) => b.sortAt.getTime() - a.sortAt.getTime());
+  return rows;
+}
+
 export async function listMergedAlerts(organizationId: string, q: ListAlertsQuery): Promise<{
   items: AlertListRow[];
   total: number;
   page: number;
   pageSize: number;
 }> {
-  const { latestByKey: stored, firstCreated } = await loadAlertAggregates(organizationId);
   if (q.estado === "closed") {
     const all = await rowsFromClosedDb(organizationId, q);
     const total = all.length;
@@ -312,6 +345,31 @@ export async function listMergedAlerts(organizationId: string, q: ListAlertsQuer
     };
   }
 
+  const isDefaultActiveView =
+    !q.q?.trim() &&
+    q.tipo === "all" &&
+    q.severidad === "all" &&
+    (q.estado === "all" || q.estado === "open" || q.estado === "acknowledged") &&
+    !q.desde &&
+    !q.hasta;
+
+  if (isDefaultActiveView) {
+    const allRows = await listAllActiveMergedAlertRows(organizationId);
+    const rows =
+      q.estado === "all"
+        ? allRows
+        : allRows.filter((r) => (q.estado === "open" ? r.status === "open" : r.status === "acknowledged"));
+    const total = rows.length;
+    const { page, pageSize } = q;
+    return {
+      items: rows.slice((page - 1) * pageSize, page * pageSize),
+      total,
+      page,
+      pageSize,
+    };
+  }
+
+  const { latestByKey: stored, firstCreated } = await loadAlertAggregates(organizationId);
   const computed = await buildActiveComputedAlerts(organizationId);
   const rows: AlertListRow[] = [];
   for (const c of computed) {
@@ -423,6 +481,20 @@ export async function resolveAlertSnapshot(
 }
 
 /** Conjunto mínimo para resumen (tablero): cantidad aprox. de filas abiertas no cerradas. */
+/** Misma lógica que el listado de alertas (sin cerradas): resumen y primeras filas para la campana. */
+export async function getAlertsInAppPanel(organizationId: string, pageSize: number) {
+  return listMergedAlerts(organizationId, {
+    q: undefined,
+    tipo: "all",
+    estado: "all",
+    severidad: "all",
+    desde: undefined,
+    hasta: undefined,
+    page: 1,
+    pageSize,
+  });
+}
+
 export async function countOpenActiveHighSeverity(organizationId: string): Promise<{ count: number }> {
   const [agg, computed] = await Promise.all([loadAlertAggregates(organizationId), buildActiveComputedAlerts(organizationId)]);
   const stored = agg.latestByKey;

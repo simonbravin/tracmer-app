@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 
 import { auth } from "@/auth";
 import { AppShell } from "@/components/layout/app-shell";
+import { getAppRequestContext } from "@/lib/auth/app-context";
 import { resolveSessionUserId } from "@/lib/auth/resolve-session-user-id";
 import { getServerEnv } from "@/lib/env";
 import { prisma } from "@tracmer-app/database";
@@ -29,5 +30,14 @@ export default async function AuthenticatedLayout({
       redirect("/onboarding/empresa");
     }
   }
-  return <AppShell>{children}</AppShell>;
+
+  let organizationDisplayName = "tracmer-app";
+  if (userId) {
+    const ctx = await getAppRequestContext();
+    if (ctx?.organization?.name?.trim()) {
+      organizationDisplayName = ctx.organization.name.trim();
+    }
+  }
+
+  return <AppShell organizationDisplayName={organizationDisplayName}>{children}</AppShell>;
 }

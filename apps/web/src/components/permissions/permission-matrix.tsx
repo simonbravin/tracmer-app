@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { cn } from "@/lib/utils";
+import { SegmentToggleButtons } from "@/components/ui/segment-toggle-buttons";
 import type { MatrixRow } from "@/lib/permissions/matrix-data";
 import { toggleRoleModule, toggleRolePermission } from "@/lib/permissions/settings-actions";
 
@@ -49,29 +49,9 @@ export function PermissionMatrixEditor({ matrix }: Props) {
     });
   };
 
-  const toggleButtons = ROLE_CODE_ORDER.map((code) => {
+  const roleSegments = ROLE_CODE_ORDER.flatMap((code) => {
     const m = matrix.find((x) => x.roleCode === code);
-    if (!m) return null;
-    const active = code === selectedCode;
-    return (
-      <button
-        key={code}
-        type="button"
-        disabled={pending}
-        onClick={() => {
-          setSelectedCode(code);
-          setMsg(null);
-        }}
-        className={cn(
-          "min-w-0 flex-1 rounded-md px-3 py-2 text-sm font-medium transition-all sm:flex-none",
-          active
-            ? "bg-background text-foreground shadow-sm"
-            : "text-muted-foreground hover:bg-background/60 hover:text-foreground",
-        )}
-      >
-        {m.roleName}
-      </button>
-    );
+    return m ? [{ value: m.roleCode as string, label: m.roleName }] : [];
   });
 
   if (matrix.length === 0) {
@@ -88,15 +68,19 @@ export function PermissionMatrixEditor({ matrix }: Props) {
 
       <div>
         <p className="text-muted-foreground mb-2 text-sm">Rol a configurar</p>
-        <div
-          className="flex w-full max-w-2xl flex-col gap-1 rounded-lg border border-border/80 bg-muted/30 p-1 sm:flex-row sm:items-stretch"
-          role="group"
+        <SegmentToggleButtons
           aria-label="Elegir rol (propietario, administrador u operativo)"
-        >
-          {toggleButtons}
-        </div>
+          className="max-w-2xl"
+          items={roleSegments}
+          value={selectedCode}
+          disabled={pending}
+          onValueChange={(code) => {
+            setSelectedCode(code);
+            setMsg(null);
+          }}
+        />
         <p className="text-muted-foreground mt-1.5 text-xs">
-          Mostramos módulos visibles y acciones para el rol seleccionado. Cambiá de pestaña para ajustar otro rol.
+          Mostramos módulos visibles y acciones para el rol seleccionado. Cambiá de opción para ajustar otro rol.
         </p>
       </div>
 

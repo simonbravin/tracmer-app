@@ -7,7 +7,8 @@ import { AlertsTable } from "@/components/alerts/alerts-table";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { STALE_PENDING_COLLECTION_DAYS } from "@/lib/alerts/constants";
-import { listMergedAlerts } from "@/lib/alerts/data";
+import { AlertsInAppBell } from "@/components/alerts/alerts-in-app-bell";
+import { getAlertsInAppPanel, listMergedAlerts } from "@/lib/alerts/data";
 import { parseListAlertsQuery } from "@/lib/alerts/validation";
 import { getAppRequestContext } from "@/lib/auth/app-context";
 export const dynamic = "force-dynamic";
@@ -40,7 +41,15 @@ export default async function AlertasPage({ searchParams }: PageProps) {
     );
   }
   const orgId = ctx.currentOrganizationId;
-  const { items, total, page, pageSize } = await listMergedAlerts(orgId, q);
+  const [panel, { items, total, page, pageSize }] = await Promise.all([getAlertsInAppPanel(orgId, 8), listMergedAlerts(orgId, q)]);
+  const feedItems = panel.items.map((x) => ({
+    key: x.key,
+    title: x.title,
+    href: x.href,
+    severity: x.severity,
+    sortAtIso: x.sortAt.toISOString(),
+  }));
+  const feedTotal = panel.total;
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
   const hasPrev = page > 1;
   const hasNext = page < totalPages;
@@ -55,7 +64,8 @@ export default async function AlertasPage({ searchParams }: PageProps) {
 
   return (
     <div className="max-w-6xl space-y-6">
-      <div>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div className="min-w-0">
         <h1 className="text-2xl font-semibold tracking-tight">Alertas</h1>
         <p className="text-muted-foreground text-sm max-w-3xl">
           Condiciones derivadas de ventas, cobranzas y conciliaciones. Las acciones <strong>reconocer</strong> y{" "}
@@ -64,6 +74,10 @@ export default async function AlertasPage({ searchParams }: PageProps) {
           &quot;no conciliada&quot; antigua: {STALE_PENDING_COLLECTION_DAYS} días.
         </p>
         {!parsed.ok && <p className="text-destructive mt-1 text-sm">Filtros ajustados a valores seguros.</p>}
+        </div>
+        <div className="shrink-0 self-start sm:pt-1">
+          <AlertsInAppBell total={feedTotal} items={feedItems} />
+        </div>
       </div>
 
       <Card>

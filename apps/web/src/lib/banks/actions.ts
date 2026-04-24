@@ -11,11 +11,17 @@ import { enforcePermission } from "@/lib/permissions/server";
 
 import { requireOrganizationContext } from "@/lib/clients/require-organization";
 import { dateToYmdUtc } from "@/lib/sales/format";
-import { parseBankDate, getBankDepositById } from "./data";
-import { formDataToObject, parseBankAccountForm, parseBankDepositForm } from "./validation";
+import { parseBankDate, getBankDepositById, getBankTransferById } from "./data";
+import {
+  formDataToObject,
+  parseBankAccountForm,
+  parseBankDepositForm,
+  parseBankTransferForm,
+} from "./validation";
 
 const CUENTAS = "/bancos/cuentas";
 const DEPO = "/bancos/depositos";
+const TRANS = "/bancos/transferencias";
 
 export type ActionState =
   | { success: true; message?: string }
@@ -341,4 +347,203 @@ export async function archiveBankDeposit(id: string): Promise<ActionState> {
   revalidatePath(DEPO);
   revalidatePath(CUENTAS);
   return { success: true, message: "Depósito archivado." };
+}
+
+// --- Transferencias entre cuentas (misma moneda; no imputan cobranzas) ---
+
+async function loadTransferAccounts(
+  organizationId: string,
+  fromId: string,
+  toId: string,
+): Promise<
+  | { ok: true; from: { id: string; currencyCode: CurrencyCode }; to: { id: string; currencyCode: CurrencyCode } }
+  | { ok: false; error: string }
+> {
+  const [from, to] = await Promise.all([
+    prisma.bankAccount.findFirst({
+      where: { id: fromId, organizationId, deletedAt: null },
+      select: { id: true, currencyCode: true, isActive: true },
+    }),
+    prisma.bankAccount.findFirst({
+      where: { id: toId, organizationId, deletedAt: null },
+      select: { id: true, currencyCode: true, isActive: true },
+    }),
+  ]);
+  if (!from || !to) {
+    return { ok: false, error: "Una de las cuentas no existe o está archivada." };
+  }
+  if (!from.isActive || !to.isActive) {
+    return { ok: false, error: "Ambas cuentas deben estar activas para transferir." };
+  }
+  if (from.currencyCode !== to.currencyCode) {
+    return {
+      ok: false,
+      error: "Las cuentas deben tener la misma moneda (ARS↔ARS o USD↔USD).",
+    };
+  }
+  return { ok: true, from, to };
+}
+
+export async function createBankTransfer(
+  _prev: ActionState | null,
+  formData: FormData,
+): Promise<ActionState> {
+  const org = await requireOrganizationContext();
+  if (!org.ok) {
+    return { success: false, error: "Necesitás una organización asignada." };
+  }
+  const denied = await enforcePermission(org.ctx, P.banks.create);
+  if (denied) {
+    return { success: false, error: denied };
+  }
+  const raw = formDataToObject(formData);
+  const p = parseBankTransferForm(raw);
+  if (!p.success) {
+    const fe: Record<string, string> = {};
+    for (const e of p.error.issues) {
+      const k = e.path[0];
+      if (typeof k === "string") fe[k] = e.message;
+    }
+    return { success: false, error: "Revisá los campos", fieldErrors: fe };
+  }
+  const d = p.data;
+  const fErr = assertNotFuture(d.transferDate);
+  if (fErr) {
+    return { success: false, error: fErr, fieldErrors: { transferDate: fErr } };
+  }
+  const acc = await loadTransferAccounts(org.ctx.organizationId, d.fromBankAccountId, d.toBankAccountId);
+  if (!acc.ok) {
+    return { success: false, error: acc.error };
+  }
+  const amount = new Prisma.Decimal(d.amount);
+  if (amount.lte(0)) {
+    return { success: false, error: "El monto debe ser mayor a 0" };
+  }
+  let fee: Prisma.Decimal | null = null;
+  if (d.feeAmount != null && d.feeAmount !== "") {
+    const f = new Prisma.Decimal(String(d.feeAmount).replace(",", ".").trim());
+    if (f.lt(0)) {
+      return { success: false, error: "La comisión no puede ser negativa" };
+    }
+    fee = f.gt(0) ? f : null;
+  }
+  let xfer: { id: string };
+  try {
+    xfer = await prisma.bankTransfer.create({
+      data: {
+        organizationId: org.ctx.organizationId,
+        fromBankAccountId: acc.from.id,
+        toBankAccountId: acc.to.id,
+        transferDate: parseBankDate(d.transferDate),
+        amount,
+        currencyCode: acc.from.currencyCode,
+        feeAmount: fee,
+        notes: d.notes,
+        createdByUserId: org.ctx.appUserId,
+      },
+      select: { id: true },
+    });
+  } catch (e) {
+    return { success: false, error: mapPrismaToMessage(e) };
+  }
+  revalidatePath(TRANS);
+  revalidatePath(CUENTAS);
+  redirect(`${TRANS}/${xfer.id}`);
+}
+
+export async function updateBankTransfer(
+  id: string,
+  _prev: ActionState | null,
+  formData: FormData,
+): Promise<ActionState> {
+  const org = await requireOrganizationContext();
+  if (!org.ok) {
+    return { success: false, error: "Necesitás una organización asignada." };
+  }
+  const denied = await enforcePermission(org.ctx, P.banks.edit);
+  if (denied) {
+    return { success: false, error: denied };
+  }
+  const ex = await getBankTransferById(org.ctx.organizationId, id);
+  if (!ex || ex.deletedAt) {
+    return { success: false, error: "Transferencia no encontrada o archivada." };
+  }
+  const raw = formDataToObject(formData);
+  const p = parseBankTransferForm(raw);
+  if (!p.success) {
+    const fe: Record<string, string> = {};
+    for (const e of p.error.issues) {
+      const k = e.path[0];
+      if (typeof k === "string") fe[k] = e.message;
+    }
+    return { success: false, error: "Revisá los campos", fieldErrors: fe };
+  }
+  const d = p.data;
+  const fErr = assertNotFuture(d.transferDate);
+  if (fErr) {
+    return { success: false, error: fErr, fieldErrors: { transferDate: fErr } };
+  }
+  const acc = await loadTransferAccounts(org.ctx.organizationId, d.fromBankAccountId, d.toBankAccountId);
+  if (!acc.ok) {
+    return { success: false, error: acc.error };
+  }
+  const amount = new Prisma.Decimal(d.amount);
+  if (amount.lte(0)) {
+    return { success: false, error: "El monto debe ser mayor a 0" };
+  }
+  let fee: Prisma.Decimal | null = null;
+  if (d.feeAmount != null && d.feeAmount !== "") {
+    const f = new Prisma.Decimal(String(d.feeAmount).replace(",", ".").trim());
+    if (f.lt(0)) {
+      return { success: false, error: "La comisión no puede ser negativa" };
+    }
+    fee = f.gt(0) ? f : null;
+  }
+  try {
+    await prisma.bankTransfer.update({
+      where: { id: ex.id },
+      data: {
+        fromBankAccountId: acc.from.id,
+        toBankAccountId: acc.to.id,
+        transferDate: parseBankDate(d.transferDate),
+        amount,
+        currencyCode: acc.from.currencyCode,
+        feeAmount: fee,
+        notes: d.notes,
+      },
+    });
+  } catch (e) {
+    return { success: false, error: mapPrismaToMessage(e) };
+  }
+  revalidatePath(TRANS);
+  revalidatePath(CUENTAS);
+  revalidatePath(`${TRANS}/${id}`);
+  revalidatePath(`${TRANS}/${id}/editar`);
+  return { success: true, message: "Transferencia actualizada." };
+}
+
+export async function archiveBankTransfer(id: string): Promise<ActionState> {
+  const org = await requireOrganizationContext();
+  if (!org.ok) {
+    return { success: false, error: "Necesitás una organización asignada." };
+  }
+  const denied = await enforcePermission(org.ctx, P.banks.edit);
+  if (denied) {
+    return { success: false, error: denied };
+  }
+  const ex = await getBankTransferById(org.ctx.organizationId, id);
+  if (!ex || ex.deletedAt) {
+    return { success: false, error: "Transferencia no encontrada o archivada." };
+  }
+  try {
+    await prisma.bankTransfer.update({
+      where: { id: ex.id },
+      data: { deletedAt: new Date() },
+    });
+  } catch (e) {
+    return { success: false, error: mapPrismaToMessage(e) };
+  }
+  revalidatePath(TRANS);
+  revalidatePath(CUENTAS);
+  return { success: true, message: "Transferencia archivada." };
 }

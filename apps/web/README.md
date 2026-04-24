@@ -16,7 +16,7 @@ La **plantilla** con nombres y comentarios está en la **raíz** del monorepo: [
 | `NEXT_PUBLIC_APP_URL` | `getPublicEnv()` | Opcional; enlaces absolutos en cliente |
 | `DEFAULT_ORGANIZATION_NAME` | idem | Opcional (reservado; el nombre de org se define en onboarding) |
 | `SKIP_ENV_VALIDATION` | — | Si `1`, no se aplica Zod estricto; solo CI/build; **no producción** |
-| `CRON_SECRET` | `POST /api/jobs/run-reports` | En producción obligatorio; ruta pública en middleware, protegida por `Authorization: Bearer` |
+| `CRON_SECRET` | `POST /api/jobs/*` (reportes, alertas) | En producción obligatorio; rutas bajo `/api/jobs/`, sin sesión, protegidas por `Authorization: Bearer` |
 
 - **`getServerEnv()`** (`src/lib/env.ts`, memoizado con `react` `cache`): valida y tipa; mensajes de error en español, sin volcar valores secretos. Usado en el layout de `(app)` (fail-fast).
 - **`getPublicEnv()`**: solo variables públicas seguras para el cliente.

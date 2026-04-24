@@ -171,3 +171,116 @@ export async function getBankDepositById(organizationId: string, id: string) {
     },
   });
 }
+
+const xferAcctSelect = { id: true, name: true, bankName: true, currencyCode: true, isActive: true } as const;
+
+/** Cuentas activas para armar transferencias; al editar se pueden incluir origen/destino aunque estén inactivas. */
+export async function listBankAccountsForTransferForm(
+  organizationId: string,
+  opts?: { ensureFromId?: string; ensureToId?: string },
+) {
+  const base = await prisma.bankAccount.findMany({
+    where: { organizationId, deletedAt: null, isActive: true },
+    select: xferAcctSelect,
+    orderBy: { name: "asc" },
+  });
+  const ids = new Set(base.map((a) => a.id));
+  const extras: { id: string; name: string; bankName: string; currencyCode: CurrencyCode; isActive: boolean }[] = [];
+  for (const id of [opts?.ensureFromId, opts?.ensureToId].filter(Boolean) as string[]) {
+    if (ids.has(id)) continue;
+    const row = await prisma.bankAccount.findFirst({
+      where: { id, organizationId, deletedAt: null },
+      select: xferAcctSelect,
+    });
+    if (row) {
+      extras.push(row);
+      ids.add(row.id);
+    }
+  }
+  return [...extras, ...base];
+}
+
+export type ListBankTransfersOptions = {
+  q?: string;
+  visibilidad: "activas" | "archivadas" | "todas";
+  dateFrom?: string;
+  dateTo?: string;
+  currencyCode?: CurrencyCode;
+  bankAccountId?: string;
+  page: number;
+  pageSize: number;
+};
+
+export async function listBankTransfers(organizationId: string, o: ListBankTransfersOptions) {
+  const where: P.BankTransferWhereInput = { organizationId };
+  if (o.visibilidad === "activas") where.deletedAt = null;
+  if (o.visibilidad === "archivadas") where.deletedAt = { not: null };
+  if (o.currencyCode) where.currencyCode = o.currencyCode;
+  if (o.dateFrom || o.dateTo) {
+    const f: P.DateTimeFilter = {};
+    if (o.dateFrom) f.gte = parseBankDate(o.dateFrom);
+    if (o.dateTo) {
+      const e = parseBankDate(o.dateTo);
+      e.setUTCDate(e.getUTCDate() + 1);
+      f.lt = e;
+    }
+    where.transferDate = f;
+  }
+  const t = o.q?.trim();
+  const andExtra: P.BankTransferWhereInput[] = [];
+  if (o.bankAccountId) {
+    andExtra.push({
+      OR: [{ fromBankAccountId: o.bankAccountId }, { toBankAccountId: o.bankAccountId }],
+    });
+  }
+  if (t) {
+    andExtra.push({
+      OR: [
+        { notes: { contains: t, mode: "insensitive" } },
+        { fromAccount: { name: { contains: t, mode: "insensitive" } } },
+        { fromAccount: { bankName: { contains: t, mode: "insensitive" } } },
+        { toAccount: { name: { contains: t, mode: "insensitive" } } },
+        { toAccount: { bankName: { contains: t, mode: "insensitive" } } },
+      ],
+    });
+  }
+  if (andExtra.length) {
+    where.AND = andExtra;
+  }
+  const { page, pageSize } = o;
+  const [items, total] = await Promise.all([
+    prisma.bankTransfer.findMany({
+      where,
+      orderBy: { transferDate: "desc" },
+      take: pageSize,
+      skip: (page - 1) * pageSize,
+      select: {
+        id: true,
+        transferDate: true,
+        amount: true,
+        currencyCode: true,
+        feeAmount: true,
+        notes: true,
+        deletedAt: true,
+        fromAccount: { select: { id: true, name: true, bankName: true, currencyCode: true } },
+        toAccount: { select: { id: true, name: true, bankName: true, currencyCode: true } },
+      },
+    }),
+    prisma.bankTransfer.count({ where }),
+  ]);
+  return { items, total, page, pageSize };
+}
+
+export async function getBankTransferById(organizationId: string, id: string) {
+  return prisma.bankTransfer.findFirst({
+    where: { id, organizationId },
+    include: {
+      fromAccount: {
+        select: { id: true, name: true, bankName: true, currencyCode: true, accountIdentifierMasked: true, isActive: true },
+      },
+      toAccount: {
+        select: { id: true, name: true, bankName: true, currencyCode: true, accountIdentifierMasked: true, isActive: true },
+      },
+    },
+  });
+}
