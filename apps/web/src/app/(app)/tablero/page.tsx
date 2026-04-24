@@ -92,7 +92,10 @@ export default async function TableroPage({ searchParams }: PageProps) {
       <Card>
         <CardHeader>
           <CardTitle className="text-lg">Filtros</CardTitle>
-          <CardDescription>Preset, cliente y búsqueda acotan listados; ver leyenda en KPIs.</CardDescription>
+          <CardDescription>
+            Período (mes, año, personalizado o total histórico), cliente y búsqueda. Leyenda de fechas por módulo debajo de
+            los KPIs.
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <DashboardFilters

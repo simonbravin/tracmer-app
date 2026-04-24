@@ -73,32 +73,41 @@ export function DashboardFilters({
           pushParams(sp);
         }}
       >
-        <SegmentToggleButtons<PeriodoPreset>
-          aria-label="Período del tablero"
-          items={[
-            { value: "mes", label: "Este mes" },
-            { value: "anio", label: "Este año" },
-            { value: "custom", label: "Personalizado" },
-          ]}
-          value={periodo}
-          onValueChange={(k) => {
-            setPeriodo(k);
-            const sp = new URLSearchParams();
-            if (k !== "mes") sp.set("periodo", k);
-            if (k === "custom") {
-              sp.set("desde", defaultDesde || rangeDesde);
-              sp.set("hasta", defaultHasta || rangeHasta);
-            }
-            if (defaultCliente) sp.set("cliente", defaultCliente);
-            if (defaultQ) sp.set("q", defaultQ);
-            pushParams(sp);
-          }}
-        />
-
-        <div className="text-muted-foreground text-xs">
-          Rango: {rangeDesde} → {rangeHasta}. Facturación: fecha de factura. Cobranzas/dep.: fecha de documento. Conciliaciones:{" "}
-          <code className="text-xs">closedAt</code> en el rango. Pendiente a depositar: saldo de cobranza aún no conciliado
-          a depósito (bruto − cierre conciliado − borradores), coherente con módulo conciliaciones.
+        <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between sm:gap-x-4">
+          <div className="min-w-0 flex-1">
+            <SegmentToggleButtons<PeriodoPreset>
+              aria-label="Período del tablero"
+              items={[
+                { value: "mes", label: "Este mes" },
+                { value: "anio", label: "Este año" },
+                { value: "custom", label: "Personalizado" },
+                { value: "total", label: "Total" },
+              ]}
+              value={periodo}
+              onValueChange={(k) => {
+                setPeriodo(k);
+                const sp = new URLSearchParams();
+                if (k !== "mes") sp.set("periodo", k);
+                if (k === "custom") {
+                  sp.set("desde", defaultDesde || rangeDesde);
+                  sp.set("hasta", defaultHasta || rangeHasta);
+                }
+                if (defaultCliente) sp.set("cliente", defaultCliente);
+                if (defaultQ) sp.set("q", defaultQ);
+                pushParams(sp);
+              }}
+            />
+          </div>
+          <p className="text-muted-foreground shrink-0 text-sm sm:text-right">
+            <span className="font-medium text-foreground">Rango:</span>{" "}
+            <span className="tabular-nums">{rangeDesde}</span>
+            <span className="sr-only"> hasta </span>
+            <span aria-hidden className="tabular-nums">
+              {" "}
+              →{" "}
+            </span>
+            <span className="tabular-nums">{rangeHasta}</span>
+          </p>
         </div>
 
         {periodo === "custom" && (

@@ -2,8 +2,11 @@ import { z } from "zod";
 
 import { parseInvoiceDateInput } from "@/lib/sales/data";
 
-export const periodoValues = ["mes", "anio", "custom"] as const;
+export const periodoValues = ["mes", "anio", "custom", "total"] as const;
 export type PeriodoPreset = (typeof periodoValues)[number];
+
+/** Inicio fijo del preset “Total” (todo el histórico coherente con filtros por fecha). */
+export const DASHBOARD_TOTAL_DESDE = "1900-01-01";
 
 const ymd = z
   .string()
@@ -66,6 +69,9 @@ function ymdFromUtc(d: Date): string {
 export function resolveDateRange(periodo: PeriodoPreset, desde: string | undefined, hasta: string | undefined, now = new Date()): { desde: string; hasta: string } {
   if (periodo === "custom" && desde && hasta) {
     return { desde, hasta };
+  }
+  if (periodo === "total") {
+    return { desde: DASHBOARD_TOTAL_DESDE, hasta: ymdFromUtc(now) };
   }
   if (periodo === "anio") {
     const y = now.getUTCFullYear();
