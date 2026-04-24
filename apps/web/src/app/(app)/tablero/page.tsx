@@ -82,10 +82,18 @@ export default async function TableroPage({ searchParams }: PageProps) {
                 : "No hay alertas de prioridad elevada en este momento (derivadas y sin cerrar)."}
             </CardDescription>
           </CardHeader>
-          <CardContent className="p-4 pt-0">
-            <Button asChild variant="secondary" size="sm">
-              <Link href="/alertas">Ver listado</Link>
-            </Button>
+          <CardContent className="space-y-2 p-4 pt-0">
+            <div className="flex flex-wrap gap-2">
+              <Button asChild variant="secondary" size="sm">
+                <Link href="/alertas">Ver alertas</Link>
+              </Button>
+              <Button asChild variant="outline" size="sm">
+                <Link href="/configuracion/alertas">Email y registro</Link>
+              </Button>
+            </div>
+            <p className="text-muted-foreground text-xs">
+              El listado y la campana son para atender; la configuración es para correo y auditoría de cambios.
+            </p>
           </CardContent>
         </Card>
         {!parsed.ok && (

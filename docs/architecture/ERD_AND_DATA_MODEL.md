@@ -166,9 +166,10 @@
 | Aspecto | Definición |
 |---------|------------|
 | **Propósito** | Cobranza (BR §1.2, §5). |
-| **Campos** | `id`, `organization_id`, `gross_amount` **NUMERIC** > 0, `currency_code` (`ARS` \| `USD`), `collection_date` (date), `payment_method_code` **PENDIENTE** FK catálogo BR §16.2, `status` (`valid` \| `voided`), `voided_at`, `void_reason`, `notes`, `created_at`, `updated_at`, `deleted_at`, `created_by_user_id`. |
+| **Campos** | `id`, `organization_id`, `gross_amount` **NUMERIC** > 0, `currency_code` (`ARS` \| `USD`), `collection_date` (date), `payment_method_code` **PENDIENTE** FK catálogo BR §16.2, `check_number` **TEXT NULL** (número de cheque u otro instrumento, opcional), `check_bank_label` **TEXT NULL** (banco emisor / descripción corta, opcional), `status` (`valid` \| `voided`), `voided_at`, `void_reason`, `notes`, `created_at`, `updated_at`, `deleted_at`, `created_by_user_id`. |
 | **FX** | `amount_ars_equivalent` **NUMERIC NULL** + `fx_rate_ars_per_unit_usd_at_collection` **NUMERIC NULL** según necesidad de KPIs BR §9 (persistido BR §10). |
 | **Relaciones** | 1:N `collection_allocations`, `collection_fees`, `reconciliation_lines`, `files` (polimórfico §8). |
+| **Fecha de factura en listados** | No se persiste en `collections`: se **deriva** de las ventas imputadas (`MIN`/`MAX` de `sales.invoice_date` vía `collection_allocations`). |
 
 ---
 
@@ -179,6 +180,21 @@
 | **Propósito** | Imputación N:M cobranza ↔ venta con tasa por línea (BR §2, §5, §10). |
 | **Campos** | `id`, `organization_id`, `collection_id`, `sale_id`, `amount_in_collection_currency` **NUMERIC**, `fx_rate_to_sale_currency` **NUMERIC** (tasa que convierte monto en moneda cobranza → moneda venta; si misma moneda = 1), `amount_in_sale_currency` **NUMERIC** (redundante controlable; o generado solo en lectura — **PENDIENTE** denormalización vs check), `created_at`, `updated_at`, `deleted_at`. |
 | **Restricción** | `SUM(amount_in_collection_currency) OVER allocations of a collection ≤ collection.gross_amount` (tolerancia BR §16.5 **PENDIENTE**). |
+
+---
+
+#### Diagrama ER (fragmento ventas ↔ cobranzas)
+
+Relación principal del flujo **facturado → cobrado** (sin depósitos ni conciliación).
+
+```mermaid
+erDiagram
+  SALES ||--o{ SALE_LINES : "1:N"
+  SALES ||--o{ COLLECTION_ALLOCATIONS : "imputada por"
+  COLLECTIONS ||--o{ COLLECTION_ALLOCATIONS : "reparte en"
+  COLLECTIONS ||--o{ COLLECTION_FEES : "1:N"
+  CLIENTS ||--o{ SALES : "1:N"
+```
 
 ---
 
@@ -257,6 +273,7 @@ Catálogo `reconciliation_discrepancy_categories`: seed **PENDIENTE** (BR §6.5)
 |---------|------------|
 | **Propósito** | Alertas derivadas (BR §11). |
 | **Campos** | `id`, `organization_id`, `type` (enum string acotado), `severity`, `entity_type`, `entity_id` (UUID/texto polimórfico), `status` (`open` \| `acknowledged` \| `closed`), `created_at`, `acknowledged_at`, `closed_at`, `payload` JSONB opcional (contexto mínimo). |
+| **In-app (campana)** | El feed muestra el **merge** de condiciones computadas (ventas/cobranzas/conciliaciones) con el estado persistido en esta tabla: filas derivadas sin fila previa se tratan como `open` hasta reconocer/cerrar. El **badge numérico** en la campana cuenta solo filas en estado `open` (pendientes de reconocimiento). No hay tabla separada de “notificaciones leídas por usuario” en MVP. |
 
 ---
 

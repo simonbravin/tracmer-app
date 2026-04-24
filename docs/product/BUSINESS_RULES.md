@@ -315,6 +315,8 @@ Cada alerta tiene: `tipo`, `severidad`, `organization_id`, referencia a entidad,
 
 **Resolución:** algunas se cierran automáticamente al corregir datos; otras requieren reconocimiento humano.
 
+**Listados y UI:** el estado operativo “vencida” en listados de ventas (§4) debe alinearse con el cómputo de alertas: al persistirse `overdue` en la venta y al resaltar el vencimiento en tablas, el usuario reconoce la misma condición que dispara la alerta de factura vencida. La campana global muestra un resumen de alertas activas; el número rojo indica cuántas siguen en estado **abierta** (`open`, sin reconocer). La lectura “por usuario” distinta del reconocimiento org-wide queda **PENDIENTE** si el producto la exige.
+
 ---
 
 ## 12. Permisos

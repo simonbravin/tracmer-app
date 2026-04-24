@@ -12,7 +12,14 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { formatDueDate, formatMoney, formatMoneyPlain, shortDateArUtc } from "@/lib/sales/format";
+import {
+  formatDueDate,
+  formatFxArsPerUsd,
+  formatMoney,
+  isPastDue,
+  shortDateArUtc,
+} from "@/lib/sales/format";
+import { cn } from "@/lib/utils";
 import type { CurrencyCode, SaleStatus } from "@prisma/client";
 
 export type SaleListRow = {
@@ -22,6 +29,7 @@ export type SaleListRow = {
   creditDays: number;
   totalAmount: { toString(): string };
   currencyCode: CurrencyCode;
+  fxRateArsPerUnitUsdAtIssue: { toString(): string } | null;
   amountArsEquivalentAtIssue: { toString(): string } | null;
   invoiceNumber: string | null;
   deletedAt: Date | null;
@@ -89,6 +97,8 @@ export function SalesTable({
                 <TableHead className="hidden sm:table-cell">Nº</TableHead>
                 <TableHead>Estado</TableHead>
                 <TableHead className="whitespace-nowrap">Total</TableHead>
+                <TableHead className="hidden lg:table-cell whitespace-nowrap">Tipo cambio</TableHead>
+                <TableHead className="hidden lg:table-cell whitespace-nowrap">Importe ARS</TableHead>
                 <TableHead className="hidden md:table-cell">Vence</TableHead>
                 <TableHead className="w-10 text-right" />
               </TableRow>
@@ -97,6 +107,12 @@ export function SalesTable({
               {items.map((s) => {
                 const archived = s.deletedAt != null;
                 const vence = formatDueDate(s.invoiceDate, s.creditDays);
+                const venceCritico =
+                  !archived &&
+                  s.status !== "collected" &&
+                  s.status !== "cancelled" &&
+                  s.status !== "draft" &&
+                  isPastDue(s.invoiceDate, s.creditDays);
                 return (
                   <TableRow
                     key={s.id}
@@ -123,14 +139,28 @@ export function SalesTable({
                     <TableCell>
                       <div className="tabular-nums text-sm sm:text-sm">
                         {formatMoney(s.totalAmount, s.currencyCode)}
-                        {s.currencyCode === "USD" && s.amountArsEquivalentAtIssue ? (
-                          <p className="text-muted-foreground text-xs">
-                            {formatMoneyPlain(s.amountArsEquivalentAtIssue)}&nbsp;ARS
-                          </p>
-                        ) : null}
                       </div>
                     </TableCell>
-                    <TableCell className="text-muted-foreground hidden md:table-cell">
+                    <TableCell className="text-muted-foreground hidden lg:table-cell tabular-nums text-sm">
+                      {s.currencyCode === "USD"
+                        ? `${formatFxArsPerUsd(s.fxRateArsPerUnitUsdAtIssue)} ARS/USD`
+                        : "—"}
+                    </TableCell>
+                    <TableCell className="hidden lg:table-cell tabular-nums text-sm">
+                      {formatMoney(
+                        s.amountArsEquivalentAtIssue ??
+                          (s.currencyCode === "ARS" ? s.totalAmount : null),
+                        "ARS",
+                      )}
+                    </TableCell>
+                    <TableCell
+                      className={cn(
+                        "hidden md:table-cell tabular-nums",
+                        venceCritico
+                          ? "text-destructive w-fit rounded-md border border-destructive/50 bg-destructive/10 px-2 py-1 text-sm font-medium"
+                          : "text-muted-foreground",
+                      )}
+                    >
                       {vence}
                     </TableCell>
                     <TableCell className="whitespace-nowrap text-right">

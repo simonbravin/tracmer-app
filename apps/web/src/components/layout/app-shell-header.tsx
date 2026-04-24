@@ -6,16 +6,19 @@ import { AppShellBreadcrumbs } from "@/components/layout/app-shell-breadcrumbs";
 import { MobileNav } from "@/components/layout/mobile-nav";
 import { NavCommandMenu } from "@/components/layout/nav-command-menu";
 import { useSidebarLayout } from "@/components/layout/sidebar-layout-context";
+import { AlertsInAppBell } from "@/components/alerts/alerts-in-app-bell";
 import { ThemeToggle } from "@/components/layout/theme-toggle";
 import { UserNav } from "@/components/layout/user-nav";
+import type { AlertBellPreviewItem } from "@/lib/alerts/bell-preview";
 
 type AppShellHeaderProps = {
   organizationDisplayName: string;
+  alertBell: { openCount: number; preview: AlertBellPreviewItem[] } | null;
 };
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 
-export function AppShellHeader({ organizationDisplayName }: AppShellHeaderProps) {
+export function AppShellHeader({ organizationDisplayName, alertBell }: AppShellHeaderProps) {
   const { collapsed, toggleCollapsed } = useSidebarLayout();
 
   return (
@@ -41,6 +44,9 @@ export function AppShellHeader({ organizationDisplayName }: AppShellHeaderProps)
       <div className="flex shrink-0 items-center gap-1 md:gap-2">
         <NavCommandMenu variant="compact" />
         <ThemeToggle />
+        {alertBell ? (
+          <AlertsInAppBell openCount={alertBell.openCount} items={alertBell.preview} />
+        ) : null}
         <Separator orientation="vertical" className="hidden h-6 sm:block" />
         <UserNav />
       </div>

@@ -13,6 +13,21 @@ export function parseCollectionDateInput(ymd: string): Date {
   return new Date(`${ymd}T12:00:00.000Z`);
 }
 
+/** Fechas de factura de las ventas imputadas (derivado de `collection_allocations` → `sales`). */
+export function invoiceDateBoundsFromAllocations(
+  allocations: { sale: { invoiceDate: Date } | null }[],
+): { earliest: Date | null; latest: Date | null } {
+  let earliest: Date | null = null;
+  let latest: Date | null = null;
+  for (const a of allocations) {
+    const d = a.sale?.invoiceDate;
+    if (!d) continue;
+    if (!earliest || d.getTime() < earliest.getTime()) earliest = d;
+    if (!latest || d.getTime() > latest.getTime()) latest = d;
+  }
+  return { earliest, latest: latest ?? earliest };
+}
+
 export type ListCollectionsOptions = {
   q?: string;
   status?: CollectionStatus;
@@ -45,10 +60,12 @@ export async function listCollections(organizationId: string, o: ListCollections
     where.OR = [
       { paymentMethodCode: { contains: t, mode: "insensitive" } },
       { notes: { contains: t, mode: "insensitive" } },
+      { checkNumber: { contains: t, mode: "insensitive" } },
+      { checkBankLabel: { contains: t, mode: "insensitive" } },
     ];
   }
   const { page, pageSize } = o;
-  const [items, total] = await Promise.all([
+  const [rawRows, total] = await Promise.all([
     prisma.collection.findMany({
       where,
       orderBy: { collectionDate: "desc" },
@@ -62,15 +79,28 @@ export async function listCollections(organizationId: string, o: ListCollections
         status: true,
         voidedAt: true,
         paymentMethodCode: true,
+        fxRateArsPerUnitUsdAtCollection: true,
         amountArsEquivalent: true,
-        notes: true,
+        checkNumber: true,
+        checkBankLabel: true,
         deletedAt: true,
-        createdAt: true,
         _count: { select: { allocations: true } },
+        allocations: {
+          where: { deletedAt: null },
+          select: { sale: { select: { invoiceDate: true } } },
+        },
       },
     }),
     prisma.collection.count({ where }),
   ]);
+  const items = rawRows.map(({ allocations, ...rest }) => {
+    const { earliest, latest } = invoiceDateBoundsFromAllocations(allocations);
+    return {
+      ...rest,
+      earliestInvoiceDate: earliest,
+      latestInvoiceDate: latest,
+    };
+  });
   return { items, total, page, pageSize };
 }
 
@@ -86,6 +116,7 @@ export async function getCollectionById(organizationId: string, id: string) {
           sale: {
             select: {
               id: true,
+              invoiceDate: true,
               invoiceNumber: true,
               totalAmount: true,
               currencyCode: true,

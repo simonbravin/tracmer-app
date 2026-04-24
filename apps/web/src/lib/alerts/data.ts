@@ -11,6 +11,7 @@ import { parseInvoiceDateInput } from "@/lib/sales/data";
 import { addCreditDays, isPastDue } from "@/lib/sales/format";
 import { labelDiscrepancyCategory } from "@/lib/reconciliations/discrepancy-categories";
 
+import type { AlertBellPreviewItem } from "./bell-preview";
 import {
   ALERT_SEVERITY_CRITICAL,
   ALERT_SEVERITY_HIGH,
@@ -493,6 +494,23 @@ export async function getAlertsInAppPanel(organizationId: string, pageSize: numb
     page: 1,
     pageSize,
   });
+}
+
+/** Campana global: últimas N alertas activas (merge) y contador de `open` (sin reconocer). */
+export async function getAlertsBellData(
+  organizationId: string,
+  previewSize: number,
+): Promise<{ openCount: number; preview: AlertBellPreviewItem[] }> {
+  const all = await listAllActiveMergedAlertRows(organizationId);
+  const openCount = all.filter((r) => r.status === AlertStatus.open).length;
+  const preview = all.slice(0, previewSize).map((x) => ({
+    key: x.key,
+    title: x.title,
+    href: x.href,
+    severity: x.severity,
+    sortAtIso: x.sortAt.toISOString(),
+  }));
+  return { openCount, preview };
 }
 
 export async function countOpenActiveHighSeverity(organizationId: string): Promise<{ count: number }> {

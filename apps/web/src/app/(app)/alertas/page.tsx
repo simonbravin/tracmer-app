@@ -8,14 +8,14 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { STALE_PENDING_COLLECTION_DAYS } from "@/lib/alerts/constants";
 import { AlertsInAppBell } from "@/components/alerts/alerts-in-app-bell";
-import { getAlertsInAppPanel, listMergedAlerts } from "@/lib/alerts/data";
+import { getAlertsBellData, listMergedAlerts } from "@/lib/alerts/data";
 import { parseListAlertsQuery } from "@/lib/alerts/validation";
 import { getAppRequestContext } from "@/lib/auth/app-context";
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: "Alertas",
-  description: "Alertas operativas y de consistencia",
+  title: "Alertas operativas",
+  description: "Listado y acciones sobre alertas de ventas, cobranzas y conciliaciones",
 };
 
 type PageProps = { searchParams: Promise<Record<string, string | string[] | undefined>> };
@@ -35,21 +35,16 @@ export default async function AlertasPage({ searchParams }: PageProps) {
   if (!ctx?.currentOrganizationId) {
     return (
       <div className="space-y-4">
-        <h1 className="text-2xl font-semibold tracking-tight">Alertas</h1>
+        <h1 className="text-2xl font-semibold tracking-tight">Alertas operativas</h1>
         <NoOrganizationMessage />
       </div>
     );
   }
   const orgId = ctx.currentOrganizationId;
-  const [panel, { items, total, page, pageSize }] = await Promise.all([getAlertsInAppPanel(orgId, 8), listMergedAlerts(orgId, q)]);
-  const feedItems = panel.items.map((x) => ({
-    key: x.key,
-    title: x.title,
-    href: x.href,
-    severity: x.severity,
-    sortAtIso: x.sortAt.toISOString(),
-  }));
-  const feedTotal = panel.total;
+  const [bell, { items, total, page, pageSize }] = await Promise.all([
+    getAlertsBellData(orgId, 5),
+    listMergedAlerts(orgId, q),
+  ]);
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
   const hasPrev = page > 1;
   const hasNext = page < totalPages;
@@ -66,17 +61,26 @@ export default async function AlertasPage({ searchParams }: PageProps) {
     <div className="max-w-6xl space-y-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0">
-        <h1 className="text-2xl font-semibold tracking-tight">Alertas</h1>
+        <h1 className="text-2xl font-semibold tracking-tight">Alertas operativas</h1>
         <p className="text-muted-foreground text-sm max-w-3xl">
-          Condiciones derivadas de ventas, cobranzas y conciliaciones. Las acciones <strong>reconocer</strong> y{" "}
-          <strong>cerrar</strong> se guardan en la base (tabla <code className="text-xs">alerts</code>); al cerrar, la
-          fila deja de mostrarse aunque el dato aún pida atención — podés reabrirla más adelante vía producto. Umbral
-          &quot;no conciliada&quot; antigua: {STALE_PENDING_COLLECTION_DAYS} días.
+          Centro de trabajo: mismas alertas que ves en la campana del encabezado. Condiciones derivadas de ventas,
+          cobranzas y conciliaciones. Las acciones <strong>reconocer</strong> y <strong>cerrar</strong> se guardan en la
+          base (tabla <code className="text-xs">alerts</code>); al cerrar, la fila deja de mostrarse aunque el dato aún
+          pida atención — podés reabrirla más adelante vía producto. Umbral &quot;no conciliada&quot; antigua:{" "}
+          {STALE_PENDING_COLLECTION_DAYS} días.
+        </p>
+        <p className="text-muted-foreground mt-2 text-sm max-w-3xl">
+          Para <strong>correo de resumen</strong>, destinatarios y <strong>registro de actividad</strong> (auditoría de
+          cambios en esta área), usá{" "}
+          <Link href="/configuracion/alertas" className="text-primary underline-offset-4 hover:underline">
+            Configuración → Alertas y notificaciones
+          </Link>
+          .
         </p>
         {!parsed.ok && <p className="text-destructive mt-1 text-sm">Filtros ajustados a valores seguros.</p>}
         </div>
         <div className="shrink-0 self-start sm:pt-1">
-          <AlertsInAppBell total={feedTotal} items={feedItems} />
+          <AlertsInAppBell openCount={bell.openCount} items={bell.preview} />
         </div>
       </div>
 

@@ -110,6 +110,8 @@ export default async function EditarCobranzaPage({ params }: Props) {
           grossAmount: c.grossAmount.toString(),
           paymentMethodCode: c.paymentMethodCode ?? "",
           notes: c.notes ?? "",
+          checkNumber: c.checkNumber ?? "",
+          checkBankLabel: c.checkBankLabel ?? "",
           fxRateArsPerUnitUsdAtCollection: c.fxRateArsPerUnitUsdAtCollection?.toString() ?? "",
           allocationRows: allocRows,
           feeRows,

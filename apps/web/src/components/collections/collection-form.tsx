@@ -83,6 +83,8 @@ type PropsEdit = {
     grossAmount: string;
     paymentMethodCode: string;
     notes: string;
+    checkNumber: string;
+    checkBankLabel: string;
     fxRateArsPerUnitUsdAtCollection: string;
     allocationRows: { saleId: string; amount: string; fx: string }[];
     feeRows: { description: string; amount: string; currencyCode: "ARS" | "USD"; fx: string }[];
@@ -135,6 +137,8 @@ export function CollectionFormCreate({ formAction, sales, defaultCollectionDate 
         defaultDate={defaultCollectionDate}
         defaultPayment=""
         defaultNotes=""
+        defaultCheckNumber=""
+        defaultCheckBankLabel=""
       />
     </form>
   );
@@ -188,6 +192,8 @@ export function CollectionFormEdit({ formAction, sales, listHref, defaultValues 
         defaultDate={defaultValues.collectionDate}
         defaultPayment={defaultValues.paymentMethodCode}
         defaultNotes={defaultValues.notes}
+        defaultCheckNumber={defaultValues.checkNumber}
+        defaultCheckBankLabel={defaultValues.checkBankLabel}
       />
     </form>
   );
@@ -210,6 +216,8 @@ function FormFields({
   defaultDate,
   defaultPayment,
   defaultNotes,
+  defaultCheckNumber,
+  defaultCheckBankLabel,
 }: {
   sales: ImputableSaleRow[];
   ccy: "ARS" | "USD";
@@ -227,6 +235,8 @@ function FormFields({
   defaultDate: string;
   defaultPayment: string;
   defaultNotes: string;
+  defaultCheckNumber: string;
+  defaultCheckBankLabel: string;
 }) {
   const saleById = useMemo(() => new Map(sales.map((s) => [s.id, s])), [sales]);
   return (
@@ -286,6 +296,28 @@ function FormFields({
           defaultValue={defaultPayment}
           maxLength={80}
         />
+      </div>
+      <div className="grid gap-4 sm:grid-cols-2">
+        <div className="grid gap-2">
+          <Label htmlFor="checkNumber">Nº de cheque (opcional)</Label>
+          <Input
+            id="checkNumber"
+            name="checkNumber"
+            placeholder="Solo si aplica"
+            defaultValue={defaultCheckNumber}
+            maxLength={64}
+          />
+        </div>
+        <div className="grid gap-2">
+          <Label htmlFor="checkBankLabel">Banco (opcional)</Label>
+          <Input
+            id="checkBankLabel"
+            name="checkBankLabel"
+            placeholder="Nombre del banco emisor"
+            defaultValue={defaultCheckBankLabel}
+            maxLength={200}
+          />
+        </div>
       </div>
       <div className="space-y-3">
         <div>

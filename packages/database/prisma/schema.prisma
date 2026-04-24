@@ -415,6 +415,9 @@ model Collection {
   collectionDate                 DateTime         @map("collection_date") @db.Date
   /// Catálogo de medios pendiente BR §16.2 — string libre acotado por app
   paymentMethodCode              String?          @map("payment_method_code")
+  /// Datos opcionales cuando el medio es cheque u otro instrumento bancario.
+  checkNumber                    String?          @map("check_number") @db.VarChar(64)
+  checkBankLabel                 String?          @map("check_bank_label") @db.VarChar(200)
   status                         CollectionStatus @default(valid)
   voidedAt                       DateTime?        @map("voided_at")
   voidReason                     String?          @map("void_reason")

@@ -8,11 +8,18 @@ import { NoOrganizationMessage } from "@/components/clients/no-organization-mess
 import { ArchiveCollectionButton } from "@/components/collections/archive-collection-button";
 import { VoidCollectionForm } from "@/components/collections/void-collection-form";
 import { getAppRequestContext } from "@/lib/auth/app-context";
-import { getCollectionById } from "@/lib/collections/data";
+import { getCollectionById, invoiceDateBoundsFromAllocations } from "@/lib/collections/data";
 import { voidCollection, type ActionState } from "@/lib/collections/actions";
 import { feeAmountInCollectionCurrency } from "@/lib/collections/amounts";
 import { labelCollectionStatus } from "@/lib/collections/status";
-import { dateTimeAr, formatMoney, formatMoneyPlain, shortDateArUtc } from "@/lib/sales/format";
+import {
+  dateTimeAr,
+  formatFxArsPerUsd,
+  formatMoney,
+  formatMoneyPlain,
+  shortDateArUtc,
+  shortInvoiceDateRangeArUtc,
+} from "@/lib/sales/format";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -74,6 +81,7 @@ export default async function CobranzaDetallePage({ params }: Props) {
   const gross = new Prisma.Decimal(c.grossAmount.toString());
   const unallocated = gross.minus(sumAlloc);
   const net = gross.minus(sumFeeCol);
+  const invBounds = invoiceDateBoundsFromAllocations(c.allocations);
   return (
     <div className="max-w-3xl space-y-6">
       <Button variant="ghost" asChild className="-ml-2 h-8 text-muted-foreground">
@@ -111,12 +119,35 @@ export default async function CobranzaDetallePage({ params }: Props) {
           </CardHeader>
           <CardContent className="space-y-1 text-sm">
             <p>
+              <span className="text-muted-foreground">Fecha de cobro: </span>
+              {shortDateArUtc(c.collectionDate)}
+            </p>
+            <p>
+              <span className="text-muted-foreground">Fecha(s) de factura (imputaciones): </span>
+              {shortInvoiceDateRangeArUtc(invBounds.earliest, invBounds.latest)}
+            </p>
+            <p>
+              <span className="text-muted-foreground">Tipo de cambio (ARS por USD): </span>
+              {c.currencyCode === "USD"
+                ? `${formatFxArsPerUsd(c.fxRateArsPerUnitUsdAtCollection)} ARS/USD`
+                : "—"}
+            </p>
+            {(c.checkNumber?.trim() || c.checkBankLabel?.trim()) ? (
+              <p>
+                <span className="text-muted-foreground">Cheque / banco: </span>
+                {[c.checkNumber?.trim(), c.checkBankLabel?.trim()].filter(Boolean).join(" · ")}
+              </p>
+            ) : null}
+            <p>
               <span className="text-muted-foreground">Bruto: </span>
               {formatMoney(c.grossAmount, c.currencyCode)}
             </p>
             <p>
-              <span className="text-muted-foreground">Equiv. ARS (registrado): </span>
-              {c.amountArsEquivalent ? formatMoneyPlain(c.amountArsEquivalent) + " ARS" : "—"}
+              <span className="text-muted-foreground">Importe en pesos (registrado): </span>
+              {formatMoney(
+                c.amountArsEquivalent ?? (c.currencyCode === "ARS" ? c.grossAmount : null),
+                "ARS",
+              )}
             </p>
             <p>
               <span className="text-muted-foreground">Imputado: </span>
@@ -147,6 +178,7 @@ export default async function CobranzaDetallePage({ params }: Props) {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Venta</TableHead>
+                    <TableHead>Fecha factura</TableHead>
                     <TableHead>En mon. cobranza</TableHead>
                     <TableHead>Tasa / venta</TableHead>
                     <TableHead>En mon. venta</TableHead>
@@ -165,6 +197,9 @@ export default async function CobranzaDetallePage({ params }: Props) {
                             <Link href={`/operaciones/ventas/${a.saleId}`}>Ver factura</Link>
                           </Button>
                         </p>
+                      </TableCell>
+                      <TableCell className="text-muted-foreground whitespace-nowrap text-sm">
+                        {a.sale?.invoiceDate ? shortDateArUtc(a.sale.invoiceDate) : "—"}
                       </TableCell>
                       <TableCell className="tabular-nums">
                         {formatMoneyPlain(a.amountInCollectionCurrency)} {c.currencyCode}

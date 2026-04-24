@@ -2,8 +2,10 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 import { NoOrganizationMessage } from "@/components/clients/no-organization-message";
+import { AuditActivitySection } from "@/components/configuracion/audit-activity-section";
 import { OrganizationAlertSettingsForm } from "@/components/configuracion/alert-settings-form";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { listRecentAuditLogs } from "@/lib/audit/data";
 import { getOrganizationAlertSettings } from "@/lib/alert-settings/data";
 import { getAppRequestContext } from "@/lib/auth/app-context";
 import { P } from "@/lib/permissions/keys";
@@ -12,8 +14,8 @@ import { hasPermission } from "@/lib/permissions/server";
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: "Reglas de alertas",
-  description: "Notificaciones por email y referencia a alertas del sistema",
+  title: "Alertas y notificaciones",
+  description: "Alertas en la app, email y registro de actividad",
 };
 
 export default async function AlertasConfigPage() {
@@ -21,7 +23,7 @@ export default async function AlertasConfigPage() {
   if (!ctx?.currentOrganizationId) {
     return (
       <div className="max-w-3xl space-y-4">
-        <h1 className="text-2xl font-semibold">Alertas (configuración)</h1>
+        <h1 className="text-2xl font-semibold">Alertas y notificaciones</h1>
         <NoOrganizationMessage />
       </div>
     );
@@ -32,16 +34,20 @@ export default async function AlertasConfigPage() {
     return <p className="text-muted-foreground text-sm">No se encontró rol de membresía.</p>;
   }
   const canManage = await hasPermission(orgId, role.id, role.code, P.settings.manage);
-  const initial = await getOrganizationAlertSettings(orgId);
+  const [initial, auditRows] = await Promise.all([
+    getOrganizationAlertSettings(orgId),
+    listRecentAuditLogs(orgId, 80),
+  ]);
 
   return (
     <div className="max-w-3xl space-y-6">
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Reglas de alertas</h1>
+        <h1 className="text-2xl font-semibold tracking-tight">Alertas y notificaciones</h1>
         <p className="text-muted-foreground mt-1 text-sm max-w-2xl">
-          Qué se puede notificar por email. Las <Link href="/alertas" className="text-primary underline-offset-4 hover:underline">alertas en la app</Link>{" "}
-          (vencimientos, cobranzas, inconsistencias) siguen en el listado dedicado; acá ajustás destinatarios y tipos para
-          el futuro envío automático y probás Resend.
+          <strong>Operación</strong> (reconocer, ir a la factura, filtros): menú Principal →{" "}
+          <Link href="/alertas" className="text-primary underline-offset-4 hover:underline">Alertas</Link> o la campana
+          arriba. <strong>Acá</strong> solo vas por preferencias de <strong>email</strong> y el <strong>registro de
+          actividad</strong> de cambios en esta configuración y en alertas (reconocer/cerrar).
         </p>
       </div>
 
@@ -57,6 +63,8 @@ export default async function AlertasConfigPage() {
           <OrganizationAlertSettingsForm canManage={canManage} initial={initial} />
         </CardContent>
       </Card>
+
+      <AuditActivitySection rows={auditRows} />
     </div>
   );
 }

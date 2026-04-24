@@ -15,7 +15,7 @@ export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
   title: "Ventas",
-  description: "Facturación y ventas (sin cobranzas todavía)",
+  description: "Facturación y ventas; cobranzas en el módulo Cobranzas.",
 };
 
 const PAGE_SIZE = 20;

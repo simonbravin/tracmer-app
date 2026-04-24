@@ -2,6 +2,8 @@
 
 import * as React from "react";
 
+import type { AlertBellPreviewItem } from "@/lib/alerts/bell-preview";
+
 import { AppShellFooter } from "@/components/layout/app-shell-footer";
 import { AppShellHeader } from "@/components/layout/app-shell-header";
 import { Sidebar } from "@/components/layout/sidebar";
@@ -15,10 +17,13 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 export function AppShell({
   children,
   organizationDisplayName = "tracmer-app",
+  alertBell = null,
 }: {
   children: React.ReactNode;
   /** Nombre de la organización activa (sidebar / menú móvil). */
   organizationDisplayName?: string;
+  /** Datos para la campana del header; null si no hay org activa. */
+  alertBell?: { openCount: number; preview: AlertBellPreviewItem[] } | null;
 }) {
   return (
     <TooltipProvider delayDuration={300}>
@@ -27,7 +32,7 @@ export function AppShell({
           <div className="mx-auto flex h-[calc(100dvh-1.5rem)] max-w-[1760px] overflow-hidden rounded-xl border border-border/80 bg-background shadow-sm sm:h-[calc(100dvh-2rem)] md:h-[calc(100dvh-2.5rem)]">
             <Sidebar organizationDisplayName={organizationDisplayName} />
             <div className="flex min-h-0 min-w-0 flex-1 flex-col">
-              <AppShellHeader organizationDisplayName={organizationDisplayName} />
+              <AppShellHeader organizationDisplayName={organizationDisplayName} alertBell={alertBell} />
               <main className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden bg-background px-5 py-6 md:px-8 md:py-8 lg:px-10 lg:py-10">
                 {children}
               </main>

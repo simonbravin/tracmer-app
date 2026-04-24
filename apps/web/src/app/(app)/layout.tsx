@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 
 import { auth } from "@/auth";
 import { AppShell } from "@/components/layout/app-shell";
+import { getAlertsBellData } from "@/lib/alerts/data";
 import { getAppRequestContext } from "@/lib/auth/app-context";
 import { resolveSessionUserId } from "@/lib/auth/resolve-session-user-id";
 import { getServerEnv } from "@/lib/env";
@@ -32,12 +33,21 @@ export default async function AuthenticatedLayout({
   }
 
   let organizationDisplayName = "tracmer-app";
+  let alertBell: Awaited<ReturnType<typeof getAlertsBellData>> | null = null;
   if (userId) {
     const ctx = await getAppRequestContext();
     if (ctx?.organization?.name?.trim()) {
       organizationDisplayName = ctx.organization.name.trim();
     }
+    const orgId = ctx?.currentOrganizationId;
+    if (orgId) {
+      alertBell = await getAlertsBellData(orgId, 5);
+    }
   }
 
-  return <AppShell organizationDisplayName={organizationDisplayName}>{children}</AppShell>;
+  return (
+    <AppShell organizationDisplayName={organizationDisplayName} alertBell={alertBell}>
+      {children}
+    </AppShell>
+  );
 }

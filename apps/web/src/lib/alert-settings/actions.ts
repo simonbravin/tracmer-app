@@ -6,6 +6,7 @@ import { Prisma } from "@prisma/client";
 import { prisma } from "@tracmer-app/database";
 import { Resend } from "resend";
 
+import { writeAuditLog } from "@/lib/audit/write";
 import { getPublicBaseUrl } from "@/lib/auth/public-base-url";
 import { requireOrganizationContext } from "@/lib/clients/require-organization";
 import { P } from "@/lib/permissions/keys";
@@ -74,6 +75,17 @@ export async function updateOrganizationAlertSettings(
       error: e instanceof Error && process.env.NODE_ENV === "development" ? e.message : "No se pudo guardar.",
     };
   }
+  await writeAuditLog({
+    organizationId: org.ctx.organizationId,
+    actorUserId: org.ctx.appUserId,
+    action: "organization_alert_settings.upsert",
+    entityType: "organization_alert_settings",
+    entityId: org.ctx.organizationId,
+    payload: {
+      emailEnabled: d.emailEnabled,
+      recipientCount: d.emailEnabled ? parseRecipientBlock(d.emailRecipients).length : 0,
+    },
+  });
   revalidatePath(CONFIG_PATH);
   return { success: true, message: "Preferencias guardadas." };
 }

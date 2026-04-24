@@ -87,6 +87,14 @@ export const createCollectionFormSchema = z
       .string()
       .optional()
       .transform((v) => (v == null || v.trim() === "" ? undefined : v.trim().slice(0, 4000))),
+    checkNumber: z
+      .string()
+      .optional()
+      .transform((v) => (v == null || v.trim() === "" ? undefined : v.trim().slice(0, 64))),
+    checkBankLabel: z
+      .string()
+      .optional()
+      .transform((v) => (v == null || v.trim() === "" ? undefined : v.trim().slice(0, 200))),
     fxRateArsPerUnitUsdAtCollection: optionalDecimal,
     allocationsJson: z.string().min(1, "Falta imputación"),
     feesJson: z.string().optional().default("[]"),
@@ -102,6 +110,8 @@ export function parseCreateCollectionForm(raw: ReturnType<typeof formDataToObjec
     grossAmount: raw.grossAmount,
     paymentMethodCode: raw.paymentMethodCode,
     notes: raw.notes,
+    checkNumber: raw.checkNumber,
+    checkBankLabel: raw.checkBankLabel,
     fxRateArsPerUnitUsdAtCollection: raw.fxRateArsPerUnitUsdAtCollection,
     allocationsJson: raw.allocationsJson,
     feesJson: raw.feesJson,

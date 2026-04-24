@@ -11,7 +11,12 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { labelCollectionStatus } from "@/lib/collections/status";
-import { shortDateArUtc, formatMoney, formatMoneyPlain } from "@/lib/sales/format";
+import {
+  shortDateArUtc,
+  formatMoney,
+  formatFxArsPerUsd,
+  shortInvoiceDateRangeArUtc,
+} from "@/lib/sales/format";
 import type { CollectionStatus, CurrencyCode } from "@prisma/client";
 
 export type CollectionListRow = {
@@ -22,7 +27,12 @@ export type CollectionListRow = {
   status: CollectionStatus;
   voidedAt: Date | null;
   paymentMethodCode: string | null;
+  fxRateArsPerUnitUsdAtCollection: { toString(): string } | null;
   amountArsEquivalent: { toString(): string } | null;
+  earliestInvoiceDate: Date | null;
+  latestInvoiceDate: Date | null;
+  checkNumber: string | null;
+  checkBankLabel: string | null;
   deletedAt: Date | null;
   _count: { allocations: number };
 };
@@ -80,9 +90,12 @@ export function CollectionsTable({
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Fecha</TableHead>
+                <TableHead className="whitespace-nowrap">Fecha factura</TableHead>
+                <TableHead className="whitespace-nowrap">Fecha cobro</TableHead>
                 <TableHead>Bruto</TableHead>
-                <TableHead className="hidden sm:table-cell">Equiv. ARS</TableHead>
+                <TableHead className="hidden md:table-cell whitespace-nowrap">Tipo cambio</TableHead>
+                <TableHead className="hidden md:table-cell whitespace-nowrap">Importe ARS</TableHead>
+                <TableHead className="hidden lg:table-cell">Cheque / banco</TableHead>
                 <TableHead>Estado</TableHead>
                 <TableHead className="w-20 text-right" />
               </TableRow>
@@ -90,12 +103,16 @@ export function CollectionsTable({
             <TableBody>
               {items.map((c) => {
                 const archived = c.deletedAt != null;
+                const chequeLine = [c.checkNumber?.trim(), c.checkBankLabel?.trim()].filter(Boolean).join(" · ");
                 return (
                   <TableRow
                     key={c.id}
                     className={archived ? "opacity-60" : undefined}
                     title={archived ? "Archivada" : undefined}
                   >
+                    <TableCell className="text-muted-foreground whitespace-nowrap text-sm">
+                      {shortInvoiceDateRangeArUtc(c.earliestInvoiceDate, c.latestInvoiceDate)}
+                    </TableCell>
                     <TableCell className="whitespace-nowrap">{shortDateArUtc(c.collectionDate)}</TableCell>
                     <TableCell>
                       {formatMoney(c.grossAmount, c.currencyCode)}
@@ -103,10 +120,20 @@ export function CollectionsTable({
                         {c.paymentMethodCode || "—"} · {c._count.allocations} imput.
                       </p>
                     </TableCell>
-                    <TableCell className="text-muted-foreground hidden sm:table-cell tabular-nums text-sm">
-                      {c.amountArsEquivalent
-                        ? `${formatMoneyPlain(c.amountArsEquivalent)} ARS`
+                    <TableCell className="text-muted-foreground hidden md:table-cell tabular-nums text-sm">
+                      {c.currencyCode === "USD"
+                        ? `${formatFxArsPerUsd(c.fxRateArsPerUnitUsdAtCollection)} ARS/USD`
                         : "—"}
+                    </TableCell>
+                    <TableCell className="hidden md:table-cell tabular-nums text-sm">
+                      {formatMoney(
+                        c.amountArsEquivalent ??
+                          (c.currencyCode === "ARS" ? c.grossAmount : null),
+                        "ARS",
+                      )}
+                    </TableCell>
+                    <TableCell className="text-muted-foreground hidden lg:table-cell max-w-[10rem] truncate text-sm">
+                      {chequeLine || "—"}
                     </TableCell>
                     <TableCell>
                       {archived ? <Badge variant="secondary">Archivada</Badge> : null}

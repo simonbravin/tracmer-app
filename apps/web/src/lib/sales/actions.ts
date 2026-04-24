@@ -10,6 +10,7 @@ import { P } from "@/lib/permissions/keys";
 import { enforcePermission } from "@/lib/permissions/server";
 
 import { requireOrganizationContext } from "@/lib/clients/require-organization";
+import { recomputeAndPersistSaleStatus } from "@/lib/collections/recompute";
 import { parseInvoiceDateInput } from "@/lib/sales/data";
 import { formDataToObject, saleFormSchema, saleUpdateSchema } from "@/lib/sales/validation";
 
@@ -124,8 +125,11 @@ export async function createSale(
   } catch (e) {
     return { success: false, error: mapPrismaToMessage(e) };
   }
+  await recomputeAndPersistSaleStatus(org.ctx.organizationId, sale.id);
   revalidatePath(VENTAS);
   revalidatePath(`${VENTAS}/${sale.id}`);
+  revalidatePath("/alertas");
+  revalidatePath("/tablero");
   redirect(`${VENTAS}/${sale.id}`);
 }
 
@@ -207,9 +211,12 @@ export async function updateSale(
   } catch (e) {
     return { success: false, error: mapPrismaToMessage(e) };
   }
+  await recomputeAndPersistSaleStatus(org.ctx.organizationId, id);
   revalidatePath(VENTAS);
   revalidatePath(`${VENTAS}/${id}`);
   revalidatePath(`${VENTAS}/${id}/editar`);
+  revalidatePath("/alertas");
+  revalidatePath("/tablero");
   return { success: true, message: "Cambios guardados." };
 }
 

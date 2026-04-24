@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { AlertStatus, Prisma } from "@prisma/client";
 import { prisma } from "@tracmer-app/database";
 
+import { writeAuditLog } from "@/lib/audit/write";
 import { requireOrganizationContext } from "@/lib/clients/require-organization";
 import { formDataToObject } from "@/lib/clients/validation";
 
@@ -92,6 +93,16 @@ export async function updateAlertStatusAction(formData: FormData) {
     }
   }
 
+  await writeAuditLog({
+    organizationId: orgId,
+    actorUserId: org.ctx.appUserId,
+    action: action === "acknowledge" ? "alert.acknowledge" : "alert.close",
+    entityType,
+    entityId,
+    payload: { alertType: type },
+  });
+
   revalidatePath("/alertas");
   revalidatePath("/tablero");
+  revalidatePath("/configuracion/alertas");
 }

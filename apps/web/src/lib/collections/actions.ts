@@ -50,7 +50,7 @@ function mapPrismaToMessage(err: unknown): string {
   if (err instanceof Error && process.env.NODE_ENV === "development") {
     return err.message;
   }
-  return "Ocurrió un error al guardar. Intentá de nuevo.";
+  return "Ocurri? un error al guardar. Intent? de nuevo.";
 }
 
 type AllocLine = z.infer<typeof allocationInputLine>;
@@ -70,7 +70,7 @@ async function buildAllocations(
   for (const line of lines) {
     const amountCol = new Prisma.Decimal(line.amountInCollectionCurrency);
     if (amountCol.lte(0)) {
-      return { ok: false as const, error: "Cada imputación debe ser un monto mayor a 0" };
+      return { ok: false as const, error: "Cada imputaci?n debe ser un monto mayor a 0" };
     }
     const sale = await prisma.sale.findFirst({
       where: { id: line.saleId, organizationId, deletedAt: null },
@@ -82,7 +82,7 @@ async function buildAllocations(
       return { ok: false as const, error: "No se puede imputar a borradores o ventas canceladas" };
     }
     if (sale.status === SaleStatus.collected) {
-      return { ok: false as const, error: "Una de las ventas ya está completamente cobrada" };
+      return { ok: false as const, error: "Una de las ventas ya est? completamente cobrada" };
     }
     const saleC = sale.currencyCode;
     let fx: Prisma.Decimal;
@@ -95,12 +95,12 @@ async function buildAllocations(
       if (r == null || r === "") {
         return {
           ok: false as const,
-          error: `Indicá la tasa de imputación para la venta ${sale.invoiceNumber?.trim() || line.saleId} (monedas distintas)`,
+          error: `Indic? la tasa de imputaci?n para la venta ${sale.invoiceNumber?.trim() || line.saleId} (monedas distintas)`,
         };
       }
       fx = new Prisma.Decimal(toDecimalString(r));
       if (fx.lte(0)) {
-        return { ok: false as const, error: "La tasa de imputación debe ser > 0" };
+        return { ok: false as const, error: "La tasa de imputaci?n debe ser > 0" };
       }
       inSale = amountCol.mul(fx);
     }
@@ -176,7 +176,7 @@ export async function createCollection(
 ): Promise<ActionState> {
   const org = await requireOrganizationContext();
   if (!org.ok) {
-    return { success: false, error: "Necesitás una organización asignada." };
+    return { success: false, error: "Necesit?s una organizaci?n asignada." };
   }
   const denied = await enforcePermission(org.ctx, P.collections.create);
   if (denied) {
@@ -191,7 +191,7 @@ export async function createCollection(
       const p = e.path[0];
       if (typeof p === "string") fe[p] = e.message;
     }
-    return { success: false, error: "Revisá los campos", fieldErrors: fe };
+    return { success: false, error: "Revis? los campos", fieldErrors: fe };
   }
   const d = base.data;
   const pa = safeParseJsonAllocations(d.allocationsJson);
@@ -244,7 +244,7 @@ export async function createCollection(
   }
   const net = collectionNetInCollectionCurrency(gross, feeB.sum);
   if (net.lt(0)) {
-    return { success: false, error: "Los gastos no pueden dejar un neto negativo (bruto − gastos ≥ 0)" };
+    return { success: false, error: "Los gastos no pueden dejar un neto negativo (bruto ��� gastos ��� 0)" };
   }
 
   const saleIds = built.items.map((i) => i.saleId);
@@ -261,6 +261,8 @@ export async function createCollection(
           collectionDate: cDate,
           paymentMethodCode: d.paymentMethodCode,
           notes: d.notes,
+          checkNumber: d.checkNumber,
+          checkBankLabel: d.checkBankLabel,
           status: CollectionStatus.valid,
           fxRateArsPerUnitUsdAtCollection: colFx,
           amountArsEquivalent: arsEq,
@@ -300,6 +302,8 @@ export async function createCollection(
   await recomputeManySales(orgId, saleIds);
   revalidatePath(COB);
   revalidatePath(`${COB}/${colId}`);
+  revalidatePath("/alertas");
+  revalidatePath("/tablero");
   redirect(`${COB}/${colId}`);
 }
 
@@ -310,7 +314,7 @@ export async function updateCollection(
 ): Promise<ActionState> {
   const org = await requireOrganizationContext();
   if (!org.ok) {
-    return { success: false, error: "Necesitás una organización asignada." };
+    return { success: false, error: "Necesit?s una organizaci?n asignada." };
   }
   const denied = await enforcePermission(org.ctx, P.collections.edit);
   if (denied) {
@@ -322,7 +326,7 @@ export async function updateCollection(
     include: { allocations: { where: { deletedAt: null } } },
   });
   if (!existing) {
-    return { success: false, error: "La cobranza no existe o está archivada." };
+    return { success: false, error: "La cobranza no existe o est? archivada." };
   }
   if (existing.status === CollectionStatus.voided) {
     return { success: false, error: "No se puede editar una cobranza anulada." };
@@ -339,7 +343,7 @@ export async function updateCollection(
       const p = e.path[0];
       if (typeof p === "string") fe[p] = e.message;
     }
-    return { success: false, error: "Revisá los campos", fieldErrors: fe };
+    return { success: false, error: "Revis? los campos", fieldErrors: fe };
   }
   const d = base.data;
   const pa = safeParseJsonAllocations(d.allocationsJson);
@@ -400,6 +404,8 @@ export async function updateCollection(
           collectionDate: cDate,
           paymentMethodCode: d.paymentMethodCode,
           notes: d.notes,
+          checkNumber: d.checkNumber,
+          checkBankLabel: d.checkBankLabel,
           fxRateArsPerUnitUsdAtCollection: colFx,
           amountArsEquivalent: arsEq,
         },
@@ -437,6 +443,8 @@ export async function updateCollection(
   revalidatePath(COB);
   revalidatePath(`${COB}/${id}`);
   revalidatePath(`${COB}/${id}/editar`);
+  revalidatePath("/alertas");
+  revalidatePath("/tablero");
   return { success: true, message: "Cobranza actualizada e imputaciones reemplazadas." };
 }
 
@@ -447,7 +455,7 @@ export async function voidCollection(
 ): Promise<ActionState> {
   const org = await requireOrganizationContext();
   if (!org.ok) {
-    return { success: false, error: "Necesitás una organización asignada." };
+    return { success: false, error: "Necesit?s una organizaci?n asignada." };
   }
   const denied = await enforcePermission(org.ctx, P.collections.archive);
   if (denied) {
@@ -462,15 +470,15 @@ export async function voidCollection(
     return { success: false, error: "Cobranza no encontrada o archivada." };
   }
   if (existing.status === CollectionStatus.voided) {
-    return { success: false, error: "La cobranza ya está anulada." };
+    return { success: false, error: "La cobranza ya est? anulada." };
   }
   const raw = formDataToObject(formData);
   const p = voidCollectionSchema.safeParse({ voidReason: raw.voidReason });
   if (!p.success) {
     return {
       success: false,
-      error: "Revisá el motivo de anulación",
-      fieldErrors: { voidReason: p.error.issues[0]?.message ?? "Inválido" },
+      error: "Revis? el motivo de anulaci?n",
+      fieldErrors: { voidReason: p.error.issues[0]?.message ?? "Inv?lido" },
     };
   }
   const saleIds = existing.allocations.map((a) => a.saleId);
@@ -491,13 +499,15 @@ export async function voidCollection(
   revalidatePath(COB);
   revalidatePath(`${COB}/${id}`);
   revalidatePath("/operaciones/ventas");
+  revalidatePath("/alertas");
+  revalidatePath("/tablero");
   return { success: true, message: "Cobranza anulada. Las ventas asociadas se recalculan." };
 }
 
 export async function archiveCollection(id: string): Promise<ActionState> {
   const org = await requireOrganizationContext();
   if (!org.ok) {
-    return { success: false, error: "Necesitás una organización asignada." };
+    return { success: false, error: "Necesit?s una organizaci?n asignada." };
   }
   const denied = await enforcePermission(org.ctx, P.collections.archive);
   if (denied) {
@@ -531,5 +541,7 @@ export async function archiveCollection(id: string): Promise<ActionState> {
   await recomputeManySales(orgId, saleIds);
   revalidatePath(COB);
   revalidatePath("/operaciones/ventas");
+  revalidatePath("/alertas");
+  revalidatePath("/tablero");
   return { success: true, message: "Cobranza archivada." };
 }

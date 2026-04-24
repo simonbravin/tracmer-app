@@ -6,9 +6,10 @@ import { prisma } from "@tracmer-app/database";
 import { collectionNetInCollectionCurrency, feeAmountInCollectionCurrency } from "@/lib/collections/amounts";
 import { labelDiscrepancyCategory } from "@/lib/reconciliations/discrepancy-categories";
 import { labelSaleStatus } from "@/lib/sales/status";
-import { parseCollectionDateInput } from "@/lib/collections/data";
+import { invoiceDateBoundsFromAllocations, parseCollectionDateInput } from "@/lib/collections/data";
 import { parseInvoiceDateInput } from "@/lib/sales/data";
 import { parseBankDate } from "@/lib/banks/data";
+import { shortInvoiceDateRangeArUtc } from "@/lib/sales/format";
 
 import type { z } from "zod";
 
@@ -81,6 +82,7 @@ export async function buildVentasTable(
       status: true,
       totalAmount: true,
       currencyCode: true,
+      fxRateArsPerUnitUsdAtIssue: true,
       amountArsEquivalentAtIssue: true,
       client: { select: { displayName: true, legalName: true } },
     },
@@ -92,7 +94,8 @@ export async function buildVentasTable(
     "Cliente",
     "Moneda",
     "Total",
-    "Equiv. ARS",
+    "Tipo cambio (ARS/USD)",
+    "Importe ARS",
     "Id",
   ];
   const rows: string[][] = items.map((s) => [
@@ -102,7 +105,11 @@ export async function buildVentasTable(
     s.client?.displayName || s.client?.legalName || "",
     s.currencyCode,
     s.totalAmount.toString(),
-    s.amountArsEquivalentAtIssue?.toString() ?? "",
+    s.currencyCode === "USD" ? (s.fxRateArsPerUnitUsdAtIssue?.toString() ?? "") : "",
+    (
+      s.amountArsEquivalentAtIssue ??
+      (s.currencyCode === "ARS" ? s.totalAmount : null)
+    )?.toString() ?? "",
     s.id,
   ]);
   return {
@@ -134,11 +141,19 @@ export async function buildCobranzasTable(organizationId: string, f: CobF, optio
     orderBy: { collectionDate: "desc" },
     include: {
       fees: { where: { deletedAt: null } },
-      allocations: { where: { deletedAt: null } },
+      allocations: {
+        where: { deletedAt: null },
+        include: { sale: { select: { invoiceDate: true } } },
+      },
     },
   });
   const headers = [
     "Fecha cobro",
+    "Fecha factura (imput.)",
+    "Tipo cambio (ARS/USD)",
+    "Importe ARS",
+    "Nº cheque",
+    "Banco",
     "Id",
     "Moneda",
     "Bruto",
@@ -158,8 +173,18 @@ export async function buildCobranzasTable(organizationId: string, f: CobF, optio
       (acc, a) => acc.add(new Prisma.Decimal(a.amountInCollectionCurrency)),
       d0(),
     );
+    const { earliest, latest } = invoiceDateBoundsFromAllocations(c.allocations);
+    const invLabel =
+      earliest && latest ? shortInvoiceDateRangeArUtc(earliest, latest) : "";
+    const arsEq =
+      c.amountArsEquivalent ?? (c.currencyCode === "ARS" ? c.grossAmount : null);
     return [
       c.collectionDate.toISOString().slice(0, 10),
+      invLabel,
+      c.currencyCode === "USD" ? (c.fxRateArsPerUnitUsdAtCollection?.toString() ?? "") : "",
+      arsEq?.toString() ?? "",
+      c.checkNumber ?? "",
+      c.checkBankLabel ?? "",
       c.id,
       c.currencyCode,
       c.grossAmount.toString(),

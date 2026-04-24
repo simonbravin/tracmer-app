@@ -75,6 +75,7 @@ export async function listSales(organizationId: string, o: ListSalesOptions) {
         creditDays: true,
         totalAmount: true,
         currencyCode: true,
+        fxRateArsPerUnitUsdAtIssue: true,
         amountArsEquivalentAtIssue: true,
         invoiceNumber: true,
         deletedAt: true,

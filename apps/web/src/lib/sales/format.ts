@@ -94,6 +94,25 @@ export function shortDateArUtc(d: Date) {
   return d.toLocaleDateString("es-AR", { timeZone: "UTC" });
 }
 
+/** Rango de fechas de factura imputadas (misma fecha → una sola). */
+export function shortInvoiceDateRangeArUtc(min: Date | null, max: Date | null): string {
+  if (!min) return "—";
+  if (!max || min.getTime() === max.getTime()) return shortDateArUtc(min);
+  const a = shortDateArUtc(min);
+  const b = shortDateArUtc(max);
+  return a === b ? a : `${a} – ${b}`;
+}
+
+export function formatFxArsPerUsd(value: { toString(): string } | null | undefined): string {
+  if (value == null) return "—";
+  const n = Number(value.toString());
+  if (Number.isNaN(n)) return "—";
+  return new Intl.NumberFormat("es-AR", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 8,
+  }).format(n);
+}
+
 export function describeOperationalStatus(
   status: SaleStatus,
   hasAllocations: boolean,
