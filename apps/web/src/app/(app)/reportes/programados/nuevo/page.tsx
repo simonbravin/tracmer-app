@@ -40,10 +40,6 @@ export default async function NuevaProgramacionPage() {
           </Link>
         </Button>
         <h1 className="text-2xl font-semibold tracking-tight">Nueva programación</h1>
-        <p className="text-muted-foreground text-sm">
-          Se requiere <code className="text-xs">RESEND_API_KEY</code> y un remitente <code className="text-xs">RESEND_FROM</code> en el
-          servidor para el envío real.
-        </p>
       </div>
       <ScheduleForm
         mode="create"

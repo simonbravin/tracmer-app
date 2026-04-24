@@ -446,7 +446,7 @@ function FormFields({
             <div>
               <Label>Moneda</Label>
               <select
-                className="border-input h-9 w-full rounded-md border px-2 text-sm"
+                className="border-input bg-background h-9 w-full rounded-md border px-2 text-sm"
                 value={row.currencyCode}
                 onChange={(e) =>
                   setFees((f) =>

@@ -86,4 +86,18 @@
   body {
     @apply bg-background text-foreground;
   }
+
+  /* Tema: controles nativos (sobre todo <select> y su lista en Windows/Chrome) usan el esquema del documento */
+  html {
+    color-scheme: light;
+  }
+  html.dark {
+    color-scheme: dark;
+  }
+
+  /* Refuerzo donde el navegador deja colorear <option> (no cubre toda la UI en todos los motores) */
+  html.dark option {
+    background-color: hsl(var(--popover));
+    color: hsl(var(--popover-foreground));
+  }
 }

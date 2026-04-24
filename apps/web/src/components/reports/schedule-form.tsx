@@ -266,7 +266,7 @@ export function ScheduleForm({ mode, scheduleId, clients, bankAccounts, defaultV
         <Label>Reporte</Label>
         <select
           className={cn(
-            "mt-1 flex h-9 w-full rounded-md border border-input bg-transparent px-2 text-sm",
+            "mt-1 flex h-9 w-full rounded-md border border-input bg-background px-2 text-sm",
             "shadow-sm focus-visible:ring-1 focus-visible:ring-ring",
           )}
           value={reportType}
@@ -282,7 +282,7 @@ export function ScheduleForm({ mode, scheduleId, clients, bankAccounts, defaultV
       <div>
         <Label>Formato del archivo</Label>
         <select
-          className="mt-1 flex h-9 w-full rounded-md border border-input bg-transparent px-2 text-sm"
+          className="mt-1 flex h-9 w-full rounded-md border border-input bg-background px-2 text-sm"
           value={format}
           onChange={(e) => setFormat(e.target.value as "xlsx" | "pdf")}
         >
@@ -305,7 +305,7 @@ export function ScheduleForm({ mode, scheduleId, clients, bankAccounts, defaultV
             <div>
               <Label>Visibilidad (ventas, cobros, depósitos, conciliación)</Label>
               <select
-                className="mt-1 flex h-9 w-full rounded-md border border-input bg-transparent px-2 text-sm"
+                className="mt-1 flex h-9 w-full rounded-md border border-input bg-background px-2 text-sm"
                 value={visibilidad}
                 onChange={(e) =>
                   setVisibilidad(e.target.value as "activas" | "archivadas" | "todas")
@@ -320,7 +320,7 @@ export function ScheduleForm({ mode, scheduleId, clients, bankAccounts, defaultV
               <div>
                 <Label>Cliente (opcional)</Label>
                 <select
-                  className="mt-1 flex h-9 w-full rounded-md border border-input bg-transparent px-2 text-sm"
+                  className="mt-1 flex h-9 w-full rounded-md border border-input bg-background px-2 text-sm"
                   value={clientId}
                   onChange={(e) => setClientId(e.target.value)}
                 >
@@ -337,7 +337,7 @@ export function ScheduleForm({ mode, scheduleId, clients, bankAccounts, defaultV
               <div>
                 <Label>Estado venta</Label>
                 <select
-                  className="mt-1 flex h-9 w-full rounded-md border border-input bg-transparent px-2 text-sm"
+                  className="mt-1 flex h-9 w-full rounded-md border border-input bg-background px-2 text-sm"
                   value={estado}
                   onChange={(e) => setEstado(e.target.value)}
                 >
@@ -354,7 +354,7 @@ export function ScheduleForm({ mode, scheduleId, clients, bankAccounts, defaultV
               <div>
                 <Label>Moneda (opcional)</Label>
                 <select
-                  className="mt-1 flex h-9 w-full rounded-md border border-input bg-transparent px-2 text-sm"
+                  className="mt-1 flex h-9 w-full rounded-md border border-input bg-background px-2 text-sm"
                   value={moneda}
                   onChange={(e) => setMoneda((e.target.value as "" | "ARS" | "USD") || "")}
                 >
@@ -368,7 +368,7 @@ export function ScheduleForm({ mode, scheduleId, clients, bankAccounts, defaultV
               <div>
                 <Label>Cuenta bancaria (opcional)</Label>
                 <select
-                  className="mt-1 flex h-9 w-full rounded-md border border-input bg-transparent px-2 text-sm"
+                  className="mt-1 flex h-9 w-full rounded-md border border-input bg-background px-2 text-sm"
                   value={bankAccountId}
                   onChange={(e) => setBankAccountId(e.target.value)}
                 >
@@ -386,7 +386,7 @@ export function ScheduleForm({ mode, scheduleId, clients, bankAccounts, defaultV
                 <div>
                   <Label>Estado conciliación (opcional)</Label>
                   <select
-                    className="mt-1 flex h-9 w-full rounded-md border border-input bg-transparent px-2 text-sm"
+                    className="mt-1 flex h-9 w-full rounded-md border border-input bg-background px-2 text-sm"
                     value={concStatus}
                     onChange={(e) => setConcStatus(e.target.value)}
                   >
@@ -399,7 +399,7 @@ export function ScheduleForm({ mode, scheduleId, clients, bankAccounts, defaultV
                 <div>
                   <Label>Filtrar fechas por</Label>
                   <select
-                    className="mt-1 flex h-9 w-full rounded-md border border-input bg-transparent px-2 text-sm"
+                    className="mt-1 flex h-9 w-full rounded-md border border-input bg-background px-2 text-sm"
                     value={porFecha}
                     onChange={(e) => setPorFecha(e.target.value as "created" | "closed")}
                   >
@@ -428,7 +428,7 @@ export function ScheduleForm({ mode, scheduleId, clients, bankAccounts, defaultV
         <div>
           <Label>Repetir</Label>
           <select
-            className="mt-1 flex h-9 w-full rounded-md border border-input bg-transparent px-2 text-sm"
+            className="mt-1 flex h-9 w-full rounded-md border border-input bg-background px-2 text-sm"
             value={frequency}
             onChange={(e) => setFrequency(e.target.value as "daily" | "weekly" | "monthly")}
           >
@@ -445,7 +445,7 @@ export function ScheduleForm({ mode, scheduleId, clients, bankAccounts, defaultV
           <div>
             <Label>Día</Label>
             <select
-              className="mt-1 flex h-9 w-full rounded-md border border-input bg-transparent px-2 text-sm"
+              className="mt-1 flex h-9 w-full rounded-md border border-input bg-background px-2 text-sm"
               value={dayOfWeek}
               onChange={(e) => setDayOfWeek(parseInt(e.target.value, 10))}
             >
@@ -473,7 +473,7 @@ export function ScheduleForm({ mode, scheduleId, clients, bankAccounts, defaultV
         <div>
           <Label>Zona horaria</Label>
           <select
-            className="mt-1 flex h-9 w-full rounded-md border border-input bg-transparent px-2 text-sm"
+            className="mt-1 flex h-9 w-full rounded-md border border-input bg-background px-2 text-sm"
             value={timezone}
             onChange={(e) => setTimezone(e.target.value)}
           >
