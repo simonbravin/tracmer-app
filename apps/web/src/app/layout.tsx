@@ -12,11 +12,15 @@ const inter = Inter({ subsets: ["latin"], variable: "--font-sans" });
 
 export const metadata: Metadata = {
   title: {
-    default: "tracmer-app",
-    template: "%s · tracmer-app",
+    default: "Tracmer",
+    template: "%s · Tracmer",
   },
   description:
     "Control administrativo y financiero para empresas de transporte (no TMS).",
+  icons: {
+    icon: [{ url: "/brand/tracmer-truck.svg", type: "image/svg+xml" }],
+    apple: "/brand/tracmer-truck.svg",
+  },
 };
 
 export default async function RootLayout({
