@@ -12,7 +12,7 @@ import {
   updateOrganizationAlertSettings,
   type AlertSettingsActionState,
 } from "@/lib/alert-settings/actions";
-import { defaultCheckedTypes, type OrganizationAlertSettingsDTO } from "@/lib/alert-settings/data";
+import { defaultCheckedTypes, type OrganizationAlertSettingsDTO } from "@/lib/alert-settings/dto";
 
 function SubmitButton({ children }: { children: React.ReactNode }) {
   const { pending } = useFormStatus();

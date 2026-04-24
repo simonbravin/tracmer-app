@@ -2,15 +2,7 @@ import "server-only";
 
 import { prisma } from "@tracmer-app/database";
 
-import { ALL_EMAIL_TYPE_CODES } from "./constants";
-
-export type OrganizationAlertSettingsDTO = {
-  id: string;
-  emailEnabled: boolean;
-  emailRecipients: string;
-  /** Tipos a notificar; `null` en DB = todos los configurables. */
-  emailAlertTypes: string[] | null;
-};
+import type { OrganizationAlertSettingsDTO } from "./dto";
 
 function mapRow(r: {
   id: string;
@@ -43,11 +35,4 @@ export async function getOrganizationAlertSettings(organizationId: string): Prom
     };
   }
   return mapRow(r);
-}
-
-export function defaultCheckedTypes(s: OrganizationAlertSettingsDTO): string[] {
-  if (s.emailAlertTypes == null || s.emailAlertTypes.length === 0) {
-    return [...ALL_EMAIL_TYPE_CODES];
-  }
-  return s.emailAlertTypes.filter((t) => ALL_EMAIL_TYPE_CODES.includes(t as (typeof ALL_EMAIL_TYPE_CODES)[number]));
 }
