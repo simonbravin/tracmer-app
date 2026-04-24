@@ -30,6 +30,8 @@ Monorepo Next.js (`apps/web`) + Postgres (Prisma) + Auth.js (NextAuth) + opciona
 
 - **Cómo (CI):** mismo comando en un paso del pipeline, con el secreto `DATABASE_URL` inyectado (no commitear la URL).
 
+- **Vercel (`prebuild`):** `scripts/vercel-migrate-if-needed.mjs` corre `prisma migrate deploy` en cada build con `DATABASE_URL`. Si esa URL usa el **pooler** de Neon (host con `-pooler`), Prisma puede fallar con **P1002** (*advisory lock* en timeout). Solución: definir en Vercel también una URL **directa** (mismo proyecto Neon, host **sin** `-pooler`) como `DIRECT_URL`, o las variables que expone la integración (`DATABASE_URL_UNPOOLED`, `POSTGRES_URL_NON_POOLING`). El script usa esa URL solo para migrar; la app en runtime sigue con `DATABASE_URL` pooler si querés.
+
 El cliente Prisma se genera con el schema en `packages/database`: hay un **`postinstall`** en ese paquete (`prisma generate`) y un **`prebuild`** en `apps/web` que vuelve a ejecutar `prisma generate` antes de `next build` (útil en Vercel para que `@prisma/client` en la app tenga enums y tipos al chequear TypeScript).
 
 ---
