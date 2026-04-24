@@ -1,11 +1,15 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 
 import { NoOrganizationMessage } from "@/components/clients/no-organization-message";
 import { PageHeader } from "@/components/common/page-header";
 import { DashboardCharts } from "@/components/dashboard/dashboard-charts";
 import { DashboardFilters } from "@/components/dashboard/dashboard-filters";
 import { DashboardKpis } from "@/components/dashboard/dashboard-kpis";
+import {
+  DashboardAlertsHeaderAction,
+  DashboardAlertsProvider,
+} from "@/components/dashboard/dashboard-alerts-context";
+import { DashboardAlertsBanner } from "@/components/dashboard/dashboard-alerts-banner";
 import {
   ClientRanksTable,
   CobranzasNoDepTable,
@@ -18,7 +22,6 @@ import { getDashboardDailySeriesArs } from "@/lib/dashboard/series";
 import { parseDashboardSearchParams, resolveDateRange } from "@/lib/dashboard/validation";
 import { getAppRequestContext } from "@/lib/auth/app-context";
 import { listActiveClients } from "@/lib/sales/data";
-import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 
@@ -68,40 +71,23 @@ export default async function TableroPage({ searchParams }: PageProps) {
 
   return (
     <div className="max-w-6xl space-y-8">
-      <div>
-        <PageHeader
-          title="Tablero"
-          description="Resumen por período, moneda, y criterio documental (misma lógica que los módulos vinculados)."
-        />
-        <Card className="max-w-xl">
-          <CardHeader className="p-4 pb-2">
-            <CardTitle className="text-base">Alertas</CardTitle>
-            <CardDescription>
-              {alertSummary.count > 0
-                ? `Hay ${alertSummary.count} alerta(s) con severidad alta o crítica sin cerrar.`
-                : "No hay alertas de prioridad elevada en este momento (derivadas y sin cerrar)."}
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-2 p-4 pt-0">
-            <div className="flex flex-wrap gap-2">
-              <Button asChild variant="secondary" size="sm">
-                <Link href="/alertas">Ver alertas</Link>
-              </Button>
-              <Button asChild variant="outline" size="sm">
-                <Link href="/configuracion/alertas">Email y registro</Link>
-              </Button>
-            </div>
-            <p className="text-muted-foreground text-xs">
-              El listado y la campana son para atender; la configuración es para correo y auditoría de cambios.
+      <DashboardAlertsProvider openHighCount={alertSummary.count}>
+        <div>
+          <PageHeader
+            title="Tablero"
+            description="Resumen por período, moneda, y criterio documental (misma lógica que los módulos vinculados)."
+            actions={<DashboardAlertsHeaderAction />}
+          />
+          <div className="mt-2">
+            <DashboardAlertsBanner />
+          </div>
+          {!parsed.ok && (
+            <p className="text-destructive mt-1 text-sm">
+              Parámetros de búsqueda ajustados al mes en curso: revisá rango &quot;personalizado&quot; (ambas fechas).
             </p>
-          </CardContent>
-        </Card>
-        {!parsed.ok && (
-          <p className="text-destructive mt-1 text-sm">
-            Parámetros de búsqueda ajustados al mes en curso: revisá rango &quot;personalizado&quot; (ambas fechas).
-          </p>
-        )}
-      </div>
+          )}
+        </div>
+      </DashboardAlertsProvider>
 
       <Card>
         <CardHeader>
