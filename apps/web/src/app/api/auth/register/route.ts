@@ -15,6 +15,7 @@ function prismaErrorToResponse(
   e: Prisma.PrismaClientKnownRequestError,
 ):
   | { message: string; status: 409 }
+  | { message: string; status: 500 }
   | { message: string; status: 503 } {
   if (e.code === "P2002" && (e.meta?.target as string[] | undefined)?.includes("email")) {
     return { message: "Ya existe una cuenta con ese correo.", status: 409 };
