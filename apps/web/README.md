@@ -1,6 +1,6 @@
 # `@tracmer-app/web`
 
-App Next.js (App Router) de **tracmer-app**: shell, tema claro/oscuro, navegación base y rutas placeholder. Auth con **Auth.js (NextAuth v5)** + **Prisma** (`@tracmer-app/database`): Google opcional, correo+contraseña, recuperación de contraseña vía Resend.
+App Next.js (App Router) de **tracmer-app**: shell, tema claro/oscuro, navegación y módulos de negocio. Auth con **Auth.js (NextAuth v5)** + **Prisma** (`@tracmer-app/database`): Google opcional, correo+contraseña, recuperación de contraseña vía Resend.
 
 ## Variables de entorno
 
@@ -39,5 +39,5 @@ Este package depende de `@tracmer-app/database` (`workspace:*`). Tras `pnpm inst
 - `src/components/layout/` — shell (sidebar, header, menú móvil)
 - `src/components/ui/` — primitives estilo shadcn
 - `src/lib/env.ts` — validación Zod (servidor y público), `SKIP_ENV_VALIDATION`
-- `src/lib/auth/` — sesión, `getAppRequestContext` (pertenencia org/rol); `src/lib/organization/` — creación de org owner; importar en servidor (ver `server.ts` con `server-only`)
-- `src/lib/tenant.ts` — `getCurrentOrganizationId()` a partir del contexto de app
+- `src/lib/auth/` — sesión, `getAppRequestContext` (pertenencia org/rol) y helpers; `src/lib/organization/` — creación de org owner; en código servidor que no debe bundlearse al cliente, usar `"server-only"` donde corresponda
+- `src/lib/clients/require-organization.ts` — contexto de org activa para acciones y páginas (`requireOrganizationContext`)
