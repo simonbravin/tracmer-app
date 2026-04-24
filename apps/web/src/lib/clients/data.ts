@@ -22,6 +22,11 @@ export async function listClients(
     const or: Prisma.ClientWhereInput[] = [
       { legalName: { contains: t, mode: "insensitive" } },
       { displayName: { contains: t, mode: "insensitive" } },
+      { address: { contains: t, mode: "insensitive" } },
+      { phone: { contains: t, mode: "insensitive" } },
+      { email: { contains: t, mode: "insensitive" } },
+      { website: { contains: t, mode: "insensitive" } },
+      { contactName: { contains: t, mode: "insensitive" } },
     ];
     if (digits.length > 0) {
       or.push({ taxId: { contains: digits, mode: "insensitive" } });

@@ -1,9 +1,7 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 
 import { NoOrganizationMessage } from "@/components/clients/no-organization-message";
 import { PermissionMatrixEditor } from "@/components/permissions/permission-matrix";
-import { Button } from "@/components/ui/button";
 import { getAppRequestContext } from "@/lib/auth/app-context";
 import { loadPermissionMatrix } from "@/lib/permissions/matrix-data";
 import { P } from "@/lib/permissions/keys";
@@ -12,8 +10,8 @@ import { hasPermission } from "@/lib/permissions/server";
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: "Permisos por rol",
-  description: "Módulos y permisos persistidos por organización",
+  title: "Módulos y permisos",
+  description: "Módulos visibles y permisos por rol (por organización)",
 };
 
 export default async function PermisosPage() {
@@ -21,7 +19,7 @@ export default async function PermisosPage() {
   if (!ctx?.currentOrganizationId) {
     return (
       <div className="space-y-4">
-        <h1 className="text-2xl font-semibold">Permisos</h1>
+        <h1 className="text-2xl font-semibold">Módulos y permisos</h1>
         <NoOrganizationMessage />
       </div>
     );
@@ -36,17 +34,15 @@ export default async function PermisosPage() {
 
   return (
     <div className="max-w-5xl space-y-6">
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Permisos por rol</h1>
-          <p className="text-muted-foreground text-sm">
-            La autorización real está en el servidor (acciones y APIs). Esta pantalla solo persiste la matriz
-            <code className="mx-1 text-xs">organization_role_*</code>.
-          </p>
-        </div>
-        <Button variant="ghost" asChild>
-          <Link href="/configuracion/modulos-permisos">Módulos y permisos (info)</Link>
-        </Button>
+      <div>
+        <h1 className="text-2xl font-semibold tracking-tight">Módulos y permisos</h1>
+        <p className="text-muted-foreground mt-1 text-sm max-w-3xl">
+          Definí qué módulos ve cada rol y qué acciones puede ejecutar. La autorización real está en el
+          servidor (acciones y APIs). Esta pantalla persiste
+          <code className="mx-1 text-xs">organization_role_enabled_modules</code>{" "}
+          y <code className="mx-1 text-xs">organization_role_permissions</code>. Usá el conmutador propietario /
+          administrador / operativo para editar un rol a la vez.
+        </p>
       </div>
       {!canManage ? (
         <p className="text-muted-foreground rounded-md border p-4 text-sm">

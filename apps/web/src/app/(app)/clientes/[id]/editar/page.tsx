@@ -57,6 +57,11 @@ export default async function EditarClientePage({ params }: Props) {
           legalName: c.legalName,
           displayName: c.displayName,
           taxId: c.taxId ?? "",
+          address: c.address ?? "",
+          phone: c.phone ?? "",
+          email: c.email ?? "",
+          website: c.website ?? "",
+          contactName: c.contactName ?? "",
           notes: c.notes ?? "",
         }}
       />

@@ -44,6 +44,11 @@ export function ClientFormEdit({
     legalName: string;
     displayName: string;
     taxId: string;
+    address: string;
+    phone: string;
+    email: string;
+    website: string;
+    contactName: string;
     notes: string;
   };
 }) {
@@ -80,6 +85,11 @@ function ClientFormFields({
     legalName: string;
     displayName: string;
     taxId: string;
+    address: string;
+    phone: string;
+    email: string;
+    website: string;
+    contactName: string;
     notes: string;
   };
 }) {
@@ -142,6 +152,61 @@ function ClientFormFields({
           defaultValue={defaultValues != null ? formatCuitForInput(defaultValues.taxId) : ""}
         />
         <p className="text-muted-foreground text-xs">11 dígitos; podés con o sin guiones.</p>
+      </div>
+      <div className="grid gap-4 sm:grid-cols-2">
+        <div className="grid gap-2 sm:col-span-2">
+          <Label htmlFor="address">Dirección (opcional)</Label>
+          <Input
+            id="address"
+            name="address"
+            defaultValue={defaultValues?.address ?? ""}
+            maxLength={2000}
+            autoComplete="street-address"
+          />
+        </div>
+        <div className="grid gap-2">
+          <Label htmlFor="phone">Teléfono (opcional)</Label>
+          <Input
+            id="phone"
+            name="phone"
+            type="tel"
+            defaultValue={defaultValues?.phone ?? ""}
+            maxLength={100}
+            autoComplete="tel"
+          />
+        </div>
+        <div className="grid gap-2">
+          <Label htmlFor="email">Email (opcional)</Label>
+          <Input
+            id="email"
+            name="email"
+            type="email"
+            defaultValue={defaultValues?.email ?? ""}
+            maxLength={500}
+            autoComplete="email"
+          />
+        </div>
+        <div className="grid gap-2 sm:col-span-2">
+          <Label htmlFor="website">Sitio web (opcional)</Label>
+          <Input
+            id="website"
+            name="website"
+            placeholder="https://"
+            defaultValue={defaultValues?.website ?? ""}
+            maxLength={500}
+            autoComplete="url"
+          />
+        </div>
+        <div className="grid gap-2 sm:col-span-2">
+          <Label htmlFor="contactName">Persona de contacto (opcional)</Label>
+          <Input
+            id="contactName"
+            name="contactName"
+            defaultValue={defaultValues?.contactName ?? ""}
+            maxLength={300}
+            autoComplete="name"
+          />
+        </div>
       </div>
       <div className="grid gap-2">
         <Label htmlFor="notes">Notas (opcional)</Label>

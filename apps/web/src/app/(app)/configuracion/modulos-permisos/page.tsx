@@ -1,11 +1,8 @@
-import type { Metadata } from "next";
+import { redirect } from "next/navigation";
 
-import { PagePlaceholder } from "@/components/page-placeholder";
-
-export const metadata: Metadata = {
-  title: "Módulos y permisos",
-};
-
+/**
+ * Ruta unificada con /configuracion/permisos (mismos módulos visibles y permisos por rol).
+ */
 export default function ModulosPermisosPage() {
-  return <PagePlaceholder title="Módulos y permisos" />;
+  redirect("/configuracion/permisos");
 }

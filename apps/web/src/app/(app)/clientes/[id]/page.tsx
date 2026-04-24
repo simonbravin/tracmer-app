@@ -89,6 +89,43 @@ export default async function ClienteDetallePage({ params }: Props) {
               <span className="text-muted-foreground">CUIT / CUIL: </span>
               <span className="font-mono">{formatTaxId(c.taxId)}</span>
             </p>
+            <p>
+              <span className="text-muted-foreground">Dirección: </span>
+              {c.address?.trim() ? c.address : "—"}
+            </p>
+            <p>
+              <span className="text-muted-foreground">Teléfono: </span>
+              {c.phone?.trim() ? c.phone : "—"}
+            </p>
+            <p>
+              <span className="text-muted-foreground">Email: </span>
+              {c.email?.trim() ? (
+                <a className="text-primary underline-offset-4 hover:underline" href={`mailto:${c.email}`}>
+                  {c.email}
+                </a>
+              ) : (
+                "—"
+              )}
+            </p>
+            <p>
+              <span className="text-muted-foreground">Web: </span>
+              {c.website?.trim() ? (
+                <a
+                  className="text-primary break-all underline-offset-4 hover:underline"
+                  href={c.website.match(/^https?:\/\//i) ? c.website : `https://${c.website}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  {c.website}
+                </a>
+              ) : (
+                "—"
+              )}
+            </p>
+            <p>
+              <span className="text-muted-foreground">Persona de contacto: </span>
+              {c.contactName?.trim() ? c.contactName : "—"}
+            </p>
             <p className="whitespace-pre-wrap">
               <span className="text-muted-foreground">Notas: </span>
               {c.notes?.trim() ? c.notes : "—"}

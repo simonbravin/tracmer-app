@@ -13,7 +13,6 @@ import {
   FileText,
   Landmark,
   LayoutDashboard,
-  LayoutGrid,
   PiggyBank,
   Scale,
   Shield,
@@ -74,8 +73,7 @@ export const appNavigation: NavSection[] = [
     links: [
       { title: "Perfil", href: "/configuracion/perfil", icon: UserCircle },
       { title: "Equipo", href: "/configuracion/equipo", icon: UsersRound },
-      { title: "Permisos por rol", href: "/configuracion/permisos", icon: Shield },
-      { title: "Módulos y permisos", href: "/configuracion/modulos-permisos", icon: LayoutGrid },
+      { title: "Módulos y permisos", href: "/configuracion/permisos", icon: Shield },
       { title: "Reglas de alertas (futuro)", href: "/configuracion/alertas", icon: SlidersHorizontal },
       { title: "Organización", href: "/configuracion/organizacion", icon: Building2 },
     ],

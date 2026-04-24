@@ -59,6 +59,11 @@ export async function createClient(
     legalName: raw.legalName,
     displayName: raw.displayName,
     taxId: raw.taxId,
+    address: raw.address,
+    phone: raw.phone,
+    email: raw.email,
+    website: raw.website,
+    contactName: raw.contactName,
     notes: raw.notes,
   });
   if (!parsed.success) {
@@ -82,6 +87,11 @@ export async function createClient(
         legalName: d.legalName,
         displayName: d.displayName,
         taxId: d.taxId,
+        address: d.address,
+        phone: d.phone,
+        email: d.email,
+        website: d.website,
+        contactName: d.contactName,
         notes: d.notes,
         createdByUserId: org.ctx.appUserId,
       },
@@ -113,6 +123,11 @@ export async function updateClient(
     legalName: raw.legalName,
     displayName: raw.displayName,
     taxId: raw.taxId,
+    address: raw.address,
+    phone: raw.phone,
+    email: raw.email,
+    website: raw.website,
+    contactName: raw.contactName,
     notes: raw.notes,
   });
   if (!parsed.success) {
@@ -137,6 +152,11 @@ export async function updateClient(
         legalName: d.legalName,
         displayName: d.displayName,
         taxId: d.taxId,
+        address: d.address,
+        phone: d.phone,
+        email: d.email,
+        website: d.website,
+        contactName: d.contactName,
         notes: d.notes,
       },
     });

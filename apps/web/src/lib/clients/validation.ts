@@ -20,6 +20,21 @@ const optionalTaxId = z
   )
   .transform((v) => (v.length === 0 ? undefined : digitsOnly(v)));
 
+const optionalTrim = (max: number) =>
+  z
+    .string()
+    .max(max, `Máx. ${max} caracteres`)
+    .transform((v) => (v.trim() === "" ? undefined : v.trim()));
+
+const optionalEmailField = z
+  .string()
+  .max(500)
+  .transform((v) => (v.trim() === "" ? undefined : v.trim().toLowerCase()))
+  .refine(
+    (v) => v == null || z.string().email().safeParse(v).success,
+    { message: "Email no válido" },
+  );
+
 export const clientFormSchema = z.object({
   legalName: z
     .string()
@@ -32,6 +47,11 @@ export const clientFormSchema = z.object({
     .max(500, "Máx. 500 caracteres")
     .trim(),
   taxId: optionalTaxId,
+  address: optionalTrim(2000),
+  phone: optionalTrim(100),
+  email: optionalEmailField,
+  website: optionalTrim(500),
+  contactName: optionalTrim(300),
   notes: z
     .string()
     .max(20_000, "Las notas son demasiado largas")

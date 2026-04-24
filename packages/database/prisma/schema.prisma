@@ -106,6 +106,10 @@ model User {
   /// Solo usuarios con registro por correo+contraseña; OAuth puede quedar null.
   passwordHash  String?   @map("password_hash")
   displayName   String?   @map("display_name")
+  /// Teléfono (perfil; no reemplaza auth).
+  phone         String?
+  /// Cargo / rol en la org (texto libre, MVP).
+  jobTitle      String?   @map("job_title")
   createdAt     DateTime  @default(now()) @map("created_at")
   updatedAt     DateTime  @updatedAt @map("updated_at")
   deletedAt     DateTime? @map("deleted_at")
@@ -300,6 +304,14 @@ model Client {
   legalName      String    @map("legal_name")
   taxId          String?   @map("tax_id")
   displayName    String    @map("display_name")
+  /// Dirección fiscal o comercial (MVP, texto libre).
+  address        String?
+  phone          String?
+  /// Email de contacto de la razón social (puede repetirse con contactos adicionales).
+  email          String?
+  website        String?
+  /// Persona de contacto principal (texto libre).
+  contactName    String?   @map("contact_name")
   notes          String?
   createdAt      DateTime  @default(now()) @map("created_at")
   updatedAt      DateTime  @updatedAt @map("updated_at")
