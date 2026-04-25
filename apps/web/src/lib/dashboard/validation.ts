@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { parseInvoiceDateInput } from "@/lib/sales/data";
+import { parseInvoiceDateInput } from "@/lib/dates/ymd";
 
 export const periodoValues = ["mes", "anio", "custom", "total"] as const;
 export type PeriodoPreset = (typeof periodoValues)[number];

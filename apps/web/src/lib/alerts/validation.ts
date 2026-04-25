@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { parseInvoiceDateInput } from "@/lib/sales/data";
+import { parseInvoiceDateInput } from "@/lib/dates/ymd";
 
 import {
   ALERT_SEVERITY_CRITICAL,
