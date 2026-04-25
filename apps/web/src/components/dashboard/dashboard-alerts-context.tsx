@@ -16,7 +16,9 @@ const STORAGE_KEY = "tracmer:tablero:banner-alertas:oculto";
 
 type AlertsContextValue = {
   openHighCount: number;
+  /** true = cartel oculto; false = cartel visible en el tablero */
   dismissed: boolean;
+  setBannerVisible: (visible: boolean) => void;
   dismiss: () => void;
   showAgain: () => void;
 };
@@ -68,44 +70,58 @@ export function DashboardAlertsProvider({
     setDismissed(false);
   }, []);
 
+  const setBannerVisible = useCallback((visible: boolean) => {
+    if (visible) {
+      showAgain();
+    } else {
+      dismiss();
+    }
+  }, [dismiss, showAgain]);
+
   const value = useMemo(
-    () => ({ openHighCount, dismissed, dismiss, showAgain }),
-    [openHighCount, dismissed, dismiss, showAgain],
+    () => ({ openHighCount, dismissed, setBannerVisible, dismiss, showAgain }),
+    [openHighCount, dismissed, setBannerVisible, dismiss, showAgain],
   );
 
   return <AlertsContext.Provider value={value}>{children}</AlertsContext.Provider>;
 }
 
 /**
- * Toggle compacto alineado con el título (vía `PageHeader` `actions`).
- * Solo si hay alertas altas/críticas abiertas y el usuario cerró el cartel.
+ * Siempre visible: encendido = cartel de alertas visible; apagado = oculto (persiste en localStorage).
  */
 export function DashboardAlertsHeaderAction() {
-  const { openHighCount, dismissed, showAgain } = useDashboardAlerts();
-
-  if (openHighCount <= 0 || !dismissed) {
-    return null;
-  }
+  const { dismissed, setBannerVisible } = useDashboardAlerts();
+  const on = !dismissed;
 
   return (
     <div className="flex items-center gap-2 sm:items-center">
-      <span className="text-muted-foreground text-xs leading-tight sm:text-sm">
-        <span className="sm:hidden">Mostrar aviso</span>
-        <span className="hidden sm:inline">Mostrar aviso de alertas</span>
+      <span
+        className="text-muted-foreground max-w-[9rem] text-xs leading-tight sm:max-w-none sm:text-sm"
+        id="tablero-alerts-toggle-label"
+      >
+        <span className="sm:hidden">Aviso de alertas</span>
+        <span className="hidden sm:inline">Aviso de alertas en el tablero</span>
       </span>
       <button
         type="button"
-        aria-label="Mostrar el cartel de alertas en el tablero"
-        title="Mostrar de nuevo el aviso de alertas"
-        onClick={showAgain}
+        role="switch"
+        aria-checked={on}
+        aria-labelledby="tablero-alerts-toggle-label"
+        title={on ? "Ocultar el aviso (podés volver a mostrarlo con el interruptor)" : "Mostrar el aviso de alertas"}
+        onClick={() => setBannerVisible(!on)}
         className={cn(
-          "border-input bg-muted/50 relative inline-flex h-7 w-11 shrink-0 items-center rounded-full border shadow-sm",
-          "transition-colors hover:bg-muted/80",
-          "focus-visible:ring-ring focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2",
+          "relative inline-flex h-7 w-11 shrink-0 items-center rounded-full border shadow-sm transition-colors",
+          "border-input focus-visible:ring-ring focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2",
+          on
+            ? "bg-primary/90 hover:bg-primary/80"
+            : "bg-muted/50 hover:bg-muted/80",
         )}
       >
         <span
-          className="bg-background border-border pointer-events-none block h-[22px] w-[22px] translate-x-0.5 rounded-full border shadow-sm"
+          className={cn(
+            "bg-background border-border pointer-events-none block h-[22px] w-[22px] rounded-full border shadow-sm transition-transform",
+            on ? "translate-x-[1.2rem]" : "translate-x-0.5",
+          )}
           aria-hidden
         />
       </button>
