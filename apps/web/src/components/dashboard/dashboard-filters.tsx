@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { SegmentToggleButtons } from "@/components/ui/segment-toggle-buttons";
 import { cn } from "@/lib/utils";
 
-import type { PeriodoPreset } from "@/lib/dashboard/validation";
+import { DASHBOARD_TOTAL_DESDE, type PeriodoPreset } from "@/lib/dashboard/validation";
 
 type ClientOption = { id: string; displayName: string; legalName: string };
 
@@ -41,6 +41,13 @@ export function DashboardFilters({
   useEffect(() => {
     setPeriodo(defaultPeriodo);
   }, [defaultPeriodo]);
+
+  /** Filtro personalizado: nunca anclar “Desde” en 1900 (malo en el input date). Si el rango venía de Total, hoy = fin de rango. */
+  const rawDesde = defaultDesde || rangeDesde;
+  const rawHasta = defaultHasta || rangeHasta;
+  const customDesdeValue =
+    rawDesde === DASHBOARD_TOTAL_DESDE ? rawHasta : rawDesde;
+  const customHastaValue = rawHasta;
 
   const pushParams = useCallback(
     (sp: URLSearchParams) => {
@@ -89,8 +96,14 @@ export function DashboardFilters({
                 const sp = new URLSearchParams();
                 if (k !== "mes") sp.set("periodo", k);
                 if (k === "custom") {
-                  sp.set("desde", defaultDesde || rangeDesde);
-                  sp.set("hasta", defaultHasta || rangeHasta);
+                  if (rangeDesde === DASHBOARD_TOTAL_DESDE) {
+                    const hoy = rangeHasta;
+                    sp.set("desde", hoy);
+                    sp.set("hasta", hoy);
+                  } else {
+                    sp.set("desde", defaultDesde || rangeDesde);
+                    sp.set("hasta", defaultHasta || rangeHasta);
+                  }
                 }
                 if (defaultCliente) sp.set("cliente", defaultCliente);
                 if (defaultQ) sp.set("q", defaultQ);
@@ -118,7 +131,7 @@ export function DashboardFilters({
                 id="desde"
                 name="desde"
                 type="date"
-                defaultValue={defaultDesde || rangeDesde}
+                defaultValue={customDesdeValue}
                 required={periodo === "custom"}
               />
             </div>
@@ -128,7 +141,7 @@ export function DashboardFilters({
                 id="hasta"
                 name="hasta"
                 type="date"
-                defaultValue={defaultHasta || rangeHasta}
+                defaultValue={customHastaValue}
                 required={periodo === "custom"}
               />
             </div>
