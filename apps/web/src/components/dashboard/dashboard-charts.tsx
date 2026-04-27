@@ -33,6 +33,9 @@ function formatAxisMoney(n: number) {
   return String(Math.round(n));
 }
 
+/** Altura fija para Recharts: evita width/height -1 en grid (min-width:auto) y primer paint. */
+const CHART_HEIGHT_PX = 280;
+
 function DashboardChartsInner({
   daily,
   topClientsArs,
@@ -48,19 +51,19 @@ function DashboardChartsInner({
 
   return (
     <div className="grid gap-6 lg:grid-cols-2">
-      <div className="rounded-lg border bg-card p-4 shadow-sm">
+      <div className="min-w-0 rounded-lg border bg-card p-4 shadow-sm">
         <h3 className="text-sm font-medium">Evolución diaria (ARS)</h3>
         <p className="text-muted-foreground mb-3 text-xs leading-relaxed">
           Facturado, cobrado bruto y depositado por día. Con cliente seleccionado, la serie de facturado respeta el
           filtro; cobranza y depósitos siguen a nivel organización.
         </p>
-        <div className="h-[280px] w-full min-h-[220px]">
+        <div className="h-[280px] w-full min-h-[220px] min-w-0">
           {!hasLine ? (
             <p className="text-muted-foreground flex h-full items-center justify-center text-sm">
               Sin movimientos ARS en el rango para graficar.
             </p>
           ) : (
-            <ResponsiveContainer width="100%" height="100%">
+            <ResponsiveContainer width="100%" height={CHART_HEIGHT_PX}>
               <LineChart data={daily} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
                 <XAxis dataKey="date" tickFormatter={shortAxisDate} tick={{ fontSize: 11 }} />
@@ -105,18 +108,18 @@ function DashboardChartsInner({
         </div>
       </div>
 
-      <div className="rounded-lg border bg-card p-4 shadow-sm">
+      <div className="min-w-0 rounded-lg border bg-card p-4 shadow-sm">
         <h3 className="text-sm font-medium">Ranking clientes — facturación (ARS)</h3>
         <p className="text-muted-foreground mb-3 text-xs leading-relaxed">
           Top del período según fecha de emisión (misma regla que la tabla de ranking).
         </p>
-        <div className="h-[280px] w-full min-h-[220px]">
+        <div className="h-[280px] w-full min-h-[220px] min-w-0">
           {!hasBar ? (
             <p className="text-muted-foreground flex h-full items-center justify-center text-sm">
               Sin clientes con facturación ARS en el rango.
             </p>
           ) : (
-            <ResponsiveContainer width="100%" height="100%">
+            <ResponsiveContainer width="100%" height={CHART_HEIGHT_PX}>
               <BarChart
                 data={topClientsArs}
                 layout="vertical"

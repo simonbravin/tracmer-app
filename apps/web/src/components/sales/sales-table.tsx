@@ -19,7 +19,6 @@ import {
   isPastDue,
   shortDateArUtc,
 } from "@/lib/sales/format";
-import { cn } from "@/lib/utils";
 import type { CurrencyCode, SaleStatus } from "@prisma/client";
 
 export type SaleListRow = {
@@ -153,15 +152,17 @@ export function SalesTable({
                         "ARS",
                       )}
                     </TableCell>
-                    <TableCell
-                      className={cn(
-                        "hidden md:table-cell tabular-nums",
-                        venceCritico
-                          ? "text-destructive w-fit rounded-md border border-destructive/50 bg-destructive/10 px-2 py-1 text-sm font-medium"
-                          : "text-muted-foreground",
+                    <TableCell className="hidden md:table-cell align-middle">
+                      {venceCritico ? (
+                        <Badge
+                          variant="destructive"
+                          className="font-normal tabular-nums text-sm leading-none"
+                        >
+                          {vence}
+                        </Badge>
+                      ) : (
+                        <span className="text-muted-foreground tabular-nums">{vence}</span>
                       )}
-                    >
-                      {vence}
                     </TableCell>
                     <TableCell className="whitespace-nowrap text-right">
                       <Button asChild size="sm" variant="secondary">

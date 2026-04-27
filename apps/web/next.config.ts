@@ -11,6 +11,10 @@ const nextConfig: NextConfig = {
       { source: "/sign-up/:path*", destination: "/registro", permanent: false },
     ];
   },
+  async rewrites() {
+    // Los navegadores piden /favicon.ico aunque metadata.icons use otro path; el ícono real es el SVG de marca.
+    return [{ source: "/favicon.ico", destination: "/brand/tracmer-truck.svg" }];
+  },
 };
 
 export default nextConfig;
