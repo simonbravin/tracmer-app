@@ -43,7 +43,7 @@ export function InviteMemberForm() {
   }
 
   return (
-    <form onSubmit={onSubmit} className="space-y-4 rounded-lg border bg-card p-4 shadow-sm">
+    <form onSubmit={onSubmit} className="space-y-4 rounded-lg border border-border bg-card p-4 shadow-surface transition-shadow duration-200 focus-within:shadow-raised">
       <h2 className="text-lg font-semibold">Invitar por correo</h2>
       <p className="text-sm text-muted-foreground">
         El invitado recibirá un enlace válido por 7 días. Solo puede ser administrador u operativo.

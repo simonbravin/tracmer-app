@@ -44,7 +44,7 @@ export function MobileNav({ organizationDisplayName }: { organizationDisplayName
           />
           <nav
             id="mobile-nav-panel"
-            className="absolute left-0 top-0 flex h-full w-[min(20rem,88vw)] flex-col gap-2 overflow-y-auto border-r bg-sidebar p-3 text-sidebar-foreground shadow-lg"
+            className="absolute left-0 top-0 flex h-full w-[min(20rem,88vw)] flex-col gap-2 overflow-y-auto border-r bg-sidebar p-3 text-sidebar-foreground shadow-float"
           >
             <div className="min-w-0 space-y-0.5 border-b border-sidebar-border pb-2">
               <div className="truncate text-sm font-semibold">{organizationDisplayName}</div>

@@ -29,7 +29,7 @@ export function AppShell({
     <TooltipProvider delayDuration={300}>
       <SidebarLayoutProvider>
         <div className="min-h-dvh bg-muted/40 p-3 sm:p-4 md:p-5">
-          <div className="mx-auto flex h-[calc(100dvh-1.5rem)] max-w-[1760px] overflow-hidden rounded-xl border border-border/80 bg-background shadow-sm sm:h-[calc(100dvh-2rem)] md:h-[calc(100dvh-2.5rem)]">
+          <div className="mx-auto flex h-[calc(100dvh-1.5rem)] max-w-[1760px] overflow-hidden rounded-xl border border-border/80 bg-background shadow-surface sm:h-[calc(100dvh-2rem)] md:h-[calc(100dvh-2.5rem)]">
             <Sidebar organizationDisplayName={organizationDisplayName} />
             <div className="flex min-h-0 min-w-0 flex-1 flex-col">
               <AppShellHeader organizationDisplayName={organizationDisplayName} alertBell={alertBell} />

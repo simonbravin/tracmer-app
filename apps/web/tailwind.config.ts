@@ -69,6 +69,11 @@ const config: Config = {
       spacing: {
         section: "var(--section-y)",
       },
+      boxShadow: {
+        surface: "var(--shadow-surface)",
+        raised: "var(--shadow-raised)",
+        float: "var(--shadow-float)",
+      },
       borderRadius: {
         lg: "var(--radius)",
         md: "calc(var(--radius) - 2px)",

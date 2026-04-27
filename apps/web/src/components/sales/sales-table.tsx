@@ -86,7 +86,7 @@ export function SalesTable({
 
   return (
     <div className="space-y-3">
-      <div className="bg-card border-border overflow-hidden rounded-lg border">
+      <div className="bg-card border-border overflow-hidden rounded-lg border shadow-surface transition-shadow duration-200 focus-within:shadow-raised">
         <div className="max-w-full overflow-x-auto">
           <Table>
             <TableHeader>
