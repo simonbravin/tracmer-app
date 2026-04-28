@@ -51,7 +51,7 @@ function DashboardChartsInner({
 
   return (
     <div className="grid gap-6 lg:grid-cols-2">
-      <div className="min-w-0 rounded-lg border bg-card p-4 shadow-surface">
+      <div className="ui-interactive-lift min-w-0 rounded-lg border border-border bg-card p-4 shadow-surface">
         <h3 className="text-sm font-medium">Evolución diaria (ARS)</h3>
         <p className="text-muted-foreground mb-3 text-xs leading-relaxed">
           Facturado, cobrado bruto y depositado por día. Con cliente seleccionado, la serie de facturado respeta el
@@ -108,7 +108,7 @@ function DashboardChartsInner({
         </div>
       </div>
 
-      <div className="min-w-0 rounded-lg border bg-card p-4 shadow-surface">
+      <div className="ui-interactive-lift min-w-0 rounded-lg border border-border bg-card p-4 shadow-surface">
         <h3 className="text-sm font-medium">Ranking clientes — facturación (ARS)</h3>
         <p className="text-muted-foreground mb-3 text-xs leading-relaxed">
           Top del período según fecha de emisión (misma regla que la tabla de ranking).

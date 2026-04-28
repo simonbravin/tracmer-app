@@ -23,7 +23,7 @@ export function DashboardKpis({ data }: { data: DashboardKpis }) {
         {items.map(({ key, label, help }) => {
           const b = data[key];
           return (
-            <Card key={key} className="min-w-0">
+            <Card key={key} className="ui-interactive-lift min-w-0">
               <CardHeader className="p-4 pb-2">
                 <CardTitle className="text-sm font-medium leading-tight">
                   {label}

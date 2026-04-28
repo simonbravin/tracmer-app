@@ -3,6 +3,7 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { DataTableSurface } from "@/components/ui/data-table-surface";
 import {
   Table,
   TableBody,
@@ -81,9 +82,8 @@ export function ReconciliationsTable({
   const hasNext = page < pages;
   return (
     <div className="space-y-3">
-      <div className="bg-card border-border overflow-hidden rounded-lg border">
-        <div className="max-w-full overflow-x-auto">
-          <Table>
+      <DataTableSurface>
+        <Table>
             <TableHeader>
               <TableRow>
                 <TableHead>Estado</TableHead>
@@ -118,9 +118,8 @@ export function ReconciliationsTable({
                 );
               })}
             </TableBody>
-          </Table>
-        </div>
-      </div>
+        </Table>
+      </DataTableSurface>
       {pages > 1 ? (
         <div className="text-muted-foreground flex flex-wrap items-center justify-between gap-2 text-sm">
           <p>

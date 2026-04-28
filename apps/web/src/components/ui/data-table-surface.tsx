@@ -6,7 +6,7 @@ export function DataTableSurface({ className, ...props }: HTMLAttributes<HTMLDiv
   return (
     <div
       className={cn(
-        "bg-card border-border overflow-x-auto rounded-md border shadow-surface transition-shadow duration-200 focus-within:shadow-raised",
+        "bg-card border-border overflow-hidden rounded-lg border shadow-surface transition-shadow duration-200 focus-within:shadow-raised",
         className,
       )}
       {...props}

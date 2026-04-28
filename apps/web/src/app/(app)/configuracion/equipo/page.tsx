@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 
 import { InviteMemberForm } from "@/components/configuracion/invite-member-form";
+import { DataTableSurface } from "@/components/ui/data-table-surface";
 import {
   Table,
   TableBody,
@@ -60,7 +61,7 @@ export default async function EquipoPage() {
 
       <div className="space-y-2">
         <h2 className="text-lg font-semibold">Miembros</h2>
-        <div className="rounded-md border">
+        <DataTableSurface>
           <Table>
             <TableHeader>
               <TableRow>
@@ -87,12 +88,12 @@ export default async function EquipoPage() {
               )}
             </TableBody>
           </Table>
-        </div>
+        </DataTableSurface>
       </div>
 
       <div className="space-y-2">
         <h2 className="text-lg font-semibold">Invitaciones pendientes</h2>
-        <div className="rounded-md border">
+        <DataTableSurface>
           <Table>
             <TableHeader>
               <TableRow>
@@ -119,7 +120,7 @@ export default async function EquipoPage() {
               )}
             </TableBody>
           </Table>
-        </div>
+        </DataTableSurface>
       </div>
     </div>
   );

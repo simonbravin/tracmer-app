@@ -1,3 +1,4 @@
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Table,
   TableBody,
@@ -6,7 +7,6 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import type { AuditLogListRow } from "@/lib/audit/data";
 import { dateTimeAr } from "@/lib/sales/format";
 
@@ -27,8 +27,7 @@ export function AuditActivitySection({ rows }: { rows: AuditLogListRow[] }) {
             cerrar alertas desde la app, aparecerán acá.
           </p>
         ) : (
-          <div className="max-w-full overflow-x-auto rounded-md border border-border">
-            <Table>
+          <Table>
               <TableHeader>
                 <TableRow>
                   <TableHead>Cuándo</TableHead>
@@ -52,8 +51,7 @@ export function AuditActivitySection({ rows }: { rows: AuditLogListRow[] }) {
                   </TableRow>
                 ))}
               </TableBody>
-            </Table>
-          </div>
+          </Table>
         )}
       </CardContent>
     </Card>

@@ -2,6 +2,7 @@ import Link from "next/link";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { DataTableSurface } from "@/components/ui/data-table-surface";
 import {
   Table,
   TableBody,
@@ -61,7 +62,7 @@ export function ClientsTable({
 
   return (
     <div className="space-y-3">
-      <div className="bg-card border-border overflow-hidden rounded-lg border">
+      <DataTableSurface>
         <Table>
           <TableHeader>
             <TableRow>
@@ -109,7 +110,7 @@ export function ClientsTable({
             })}
           </TableBody>
         </Table>
-      </div>
+      </DataTableSurface>
       {pages > 1 ? (
         <div className="text-muted-foreground flex flex-wrap items-center justify-between gap-2 text-sm">
           <p>

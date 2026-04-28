@@ -111,34 +111,32 @@ export default async function ConciliacionDetallePage({ params }: Props) {
           {r.lines.length === 0 ? (
             <p className="text-muted-foreground text-sm">No hay líneas. Editá el borrador para agregar.</p>
           ) : (
-            <div className="max-w-full overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Cobranza</TableHead>
-                    <TableHead>Depósito</TableHead>
-                    <TableHead className="text-right">Importe</TableHead>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Cobranza</TableHead>
+                  <TableHead>Depósito</TableHead>
+                  <TableHead className="text-right">Importe</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {r.lines.map((l) => (
+                  <TableRow key={l.id}>
+                    <TableCell className="whitespace-nowrap text-sm">
+                      {shortDateArUtc(l.collection.collectionDate)} · {formatMoney(l.collection.grossAmount, l.collection.currencyCode)}
+                      <p className="text-muted-foreground text-xs">ID: {l.collectionId.slice(0, 8)}</p>
+                    </TableCell>
+                    <TableCell>
+                      {l.bankDeposit.bankAccount.name} · {shortDateArUtc(l.bankDeposit.depositDate)}
+                      <p className="text-muted-foreground text-xs">ID: {l.bankDepositId.slice(0, 8)}</p>
+                    </TableCell>
+                    <TableCell className="text-right">
+                      {formatMoney(l.amountAppliedToDeposit, l.collection.currencyCode)}
+                    </TableCell>
                   </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {r.lines.map((l) => (
-                    <TableRow key={l.id}>
-                      <TableCell className="whitespace-nowrap text-sm">
-                        {shortDateArUtc(l.collection.collectionDate)} · {formatMoney(l.collection.grossAmount, l.collection.currencyCode)}
-                        <p className="text-muted-foreground text-xs">ID: {l.collectionId.slice(0, 8)}</p>
-                      </TableCell>
-                      <TableCell>
-                        {l.bankDeposit.bankAccount.name} · {shortDateArUtc(l.bankDeposit.depositDate)}
-                        <p className="text-muted-foreground text-xs">ID: {l.bankDepositId.slice(0, 8)}</p>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        {formatMoney(l.amountAppliedToDeposit, l.collection.currencyCode)}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
+                ))}
+              </TableBody>
+            </Table>
           )}
         </CardContent>
       </Card>

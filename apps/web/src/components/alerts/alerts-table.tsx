@@ -6,6 +6,7 @@ import { labelAlertType, labelSeverity } from "@/lib/alerts/constants";
 import { AlertStatus } from "@prisma/client";
 
 import { Button } from "@/components/ui/button";
+import { DataTableSurface } from "@/components/ui/data-table-surface";
 import {
   Table,
   TableBody,
@@ -66,7 +67,7 @@ export function AlertsTable({ items }: { items: AlertListRow[] }) {
   }
 
   return (
-    <div className="overflow-x-auto rounded-md border">
+    <DataTableSurface>
       <Table>
         <TableHeader>
           <TableRow>
@@ -131,6 +132,6 @@ export function AlertsTable({ items }: { items: AlertListRow[] }) {
           ))}
         </TableBody>
       </Table>
-    </div>
+    </DataTableSurface>
   );
 }

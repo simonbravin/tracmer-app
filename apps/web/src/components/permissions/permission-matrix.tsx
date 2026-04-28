@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { DataTableSurface } from "@/components/ui/data-table-surface";
 import { SegmentToggleButtons } from "@/components/ui/segment-toggle-buttons";
 import type { MatrixRow } from "@/lib/permissions/matrix-data";
 import { toggleRoleModule, toggleRolePermission } from "@/lib/permissions/settings-actions";
@@ -120,7 +121,7 @@ export function PermissionMatrixEditor({ matrix }: Props) {
           </div>
           <div>
             <h3 className="mb-2 text-sm font-medium">Permisos por acción</h3>
-            <div className="max-h-[420px] overflow-auto rounded-md border">
+            <DataTableSurface className="max-h-[420px] overflow-y-auto">
               <table className="w-full text-left text-sm">
                 <thead className="bg-muted/80">
                   <tr>
@@ -155,7 +156,7 @@ export function PermissionMatrixEditor({ matrix }: Props) {
                   ))}
                 </tbody>
               </table>
-            </div>
+            </DataTableSurface>
           </div>
         </CardContent>
       </Card>

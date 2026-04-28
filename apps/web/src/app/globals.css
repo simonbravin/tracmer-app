@@ -110,3 +110,10 @@
     color: hsl(var(--popover-foreground));
   }
 }
+
+@layer utilities {
+  /** Indicadores / gráficos: leve elevación al hover (no usar en tablas de datos). */
+  .ui-interactive-lift {
+    @apply transition-shadow transition-transform duration-200 ease-out hover:-translate-y-0.5 hover:shadow-raised;
+  }
+}

@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { DataTableSurface } from "@/components/ui/data-table-surface";
 import {
   Table,
   TableBody,
@@ -326,7 +327,7 @@ export default async function ReporteDetallePage({ params, searchParams }: P) {
             Hay más resultados: la exportación Excel/CSV incluye más filas; el PDF se limita automáticamente.
           </p>
         )}
-        <div className="overflow-x-auto rounded-md border">
+        <DataTableSurface>
           <Table>
             <TableHeader>
               <TableRow>
@@ -357,7 +358,7 @@ export default async function ReporteDetallePage({ params, searchParams }: P) {
               )}
             </TableBody>
           </Table>
-        </div>
+        </DataTableSurface>
       </div>
     </div>
   );
