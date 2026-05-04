@@ -30,9 +30,9 @@ export function DashboardAlertsBanner() {
       >
         <X className="h-4 w-4" aria-hidden />
       </button>
-      <CardContent className="p-3 pr-11 sm:p-4 sm:pr-12">
-        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between lg:gap-6">
-          <div className="flex min-w-0 flex-1 flex-col gap-0.5 sm:flex-row sm:items-baseline sm:gap-3">
+      <CardContent className="px-3 py-2.5 pr-11 sm:px-4 sm:py-3 sm:pr-12">
+        <div className="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between lg:gap-4">
+          <div className="flex min-w-0 flex-1 flex-col gap-0.5 sm:flex-row sm:items-baseline sm:gap-2">
             <span className="shrink-0 text-base font-semibold leading-none">Alertas</span>
             <p className="text-muted-foreground text-sm leading-snug sm:min-w-0 sm:truncate">
               {description}

@@ -73,7 +73,7 @@ export default async function TableroPage({ searchParams }: PageProps) {
             description="Resumen por rango de fechas y moneda (misma lógica documental que los módulos vinculados)."
             actions={<DashboardAlertsHeaderAction />}
           />
-          <div className="mt-2">
+          <div className="mt-1">
             <DashboardAlertsBanner />
           </div>
           {!parsed.ok && (

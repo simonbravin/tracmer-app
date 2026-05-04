@@ -6,6 +6,7 @@ import { useCallback, useEffect, useState, useTransition } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { SegmentToggleButtons } from "@/components/ui/segment-toggle-buttons";
 import { cn } from "@/lib/utils";
 
 import { DASHBOARD_TOTAL_DESDE, type PeriodoPreset } from "@/lib/dashboard/validation";
@@ -66,30 +67,13 @@ export function DashboardFilters({
       }
       pushParams(sp);
     },
-    [
-      defaultDesde,
-      defaultHasta,
-      pushParams,
-      rangeDesde,
-      rangeHasta,
-    ],
+    [defaultDesde, defaultHasta, pushParams, rangeDesde, rangeHasta],
   );
 
   return (
-    <div className={cn("space-y-3", className)}>
-      <p className="text-muted-foreground text-xs">
-        Rango aplicado:{" "}
-        <span className="tabular-nums text-foreground">{rangeDesde}</span>
-        <span className="sr-only"> hasta </span>
-        <span aria-hidden className="tabular-nums text-foreground">
-          {" "}
-          →{" "}
-        </span>
-        <span className="tabular-nums text-foreground">{rangeHasta}</span>
-        . La leyenda bajo los KPIs indica qué fecha usa cada módulo.
-      </p>
+    <div className={cn("space-y-2", className)}>
       <form
-        className="grid gap-3"
+        className="space-y-2"
         onSubmit={(e) => {
           e.preventDefault();
           if (periodo !== "custom") return;
@@ -105,59 +89,65 @@ export function DashboardFilters({
           pushParams(sp);
         }}
       >
-        <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
-          <div className="grid gap-1.5">
-            <Label htmlFor="tablero-periodo" className="text-xs">
-              Período
-            </Label>
-            <select
-              id="tablero-periodo"
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between sm:gap-x-4 sm:gap-y-2">
+          <div className="min-w-0 flex-1">
+            <SegmentToggleButtons<PeriodoPreset>
+              aria-label="Período del tablero"
+              disabled={pending}
+              items={[
+                { value: "mes", label: "Este mes" },
+                { value: "anio", label: "Este año" },
+                { value: "custom", label: "Personalizado" },
+                { value: "total", label: "Total" },
+              ]}
               value={periodo}
-              onChange={(e) => {
-                applyPeriodo(e.target.value as PeriodoPreset);
-              }}
-              className="border-input bg-background ring-offset-background h-9 min-w-[12rem] rounded-md border px-2 text-sm shadow-sm"
-            >
-              <option value="mes">Este mes</option>
-              <option value="anio">Este año</option>
-              <option value="custom">Personalizado</option>
-              <option value="total">Total histórico</option>
-            </select>
+              onValueChange={applyPeriodo}
+            />
           </div>
-          {periodo === "custom" && (
-            <>
-              <div className="grid gap-1.5">
-                <Label htmlFor="tablero-desde" className="text-xs">
-                  Desde
-                </Label>
-                <Input
-                  id="tablero-desde"
-                  name="desde"
-                  type="date"
-                  defaultValue={customDesdeValue}
-                  required
-                />
-              </div>
-              <div className="grid gap-1.5">
-                <Label htmlFor="tablero-hasta" className="text-xs">
-                  Hasta
-                </Label>
-                <Input
-                  id="tablero-hasta"
-                  name="hasta"
-                  type="date"
-                  defaultValue={customHastaValue}
-                  required
-                />
-              </div>
-              <div className="flex items-end sm:col-span-2 lg:col-span-1">
-                <Button type="submit" disabled={pending} className="w-full sm:w-auto">
-                  {pending ? "…" : "Aplicar fechas"}
-                </Button>
-              </div>
-            </>
-          )}
+          <p className="text-muted-foreground shrink-0 text-xs leading-snug sm:max-w-[min(100%,22rem)] sm:text-right">
+            <span className="font-medium text-foreground">Rango:</span>{" "}
+            <span className="tabular-nums text-foreground">{rangeDesde}</span>
+            <span className="sr-only"> hasta </span>
+            <span aria-hidden className="tabular-nums text-foreground">
+              {" "}
+              →{" "}
+            </span>
+            <span className="tabular-nums text-foreground">{rangeHasta}</span>
+            <span className="text-muted-foreground"> · Fechas por módulo en KPIs.</span>
+          </p>
         </div>
+
+        {periodo === "custom" && (
+          <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-end sm:gap-3">
+            <div className="grid min-w-[8.5rem] flex-1 gap-1.5 sm:max-w-[11rem]">
+              <Label htmlFor="tablero-desde" className="text-xs">
+                Desde
+              </Label>
+              <Input
+                id="tablero-desde"
+                name="desde"
+                type="date"
+                defaultValue={customDesdeValue}
+                required
+              />
+            </div>
+            <div className="grid min-w-[8.5rem] flex-1 gap-1.5 sm:max-w-[11rem]">
+              <Label htmlFor="tablero-hasta" className="text-xs">
+                Hasta
+              </Label>
+              <Input
+                id="tablero-hasta"
+                name="hasta"
+                type="date"
+                defaultValue={customHastaValue}
+                required
+              />
+            </div>
+            <Button type="submit" disabled={pending} size="sm" className="w-full sm:w-auto">
+              {pending ? "…" : "Aplicar fechas"}
+            </Button>
+          </div>
+        )}
       </form>
     </div>
   );
