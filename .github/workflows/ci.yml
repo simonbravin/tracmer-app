@@ -29,11 +29,12 @@ jobs:
           node-version: "22"
           cache: "pnpm"
 
+      # DATABASE_URL en la misma línea: asegura que exista aunque algo pise el env del job.
       - name: Install
-        run: pnpm install --frozen-lockfile
+        run: DATABASE_URL="postgresql://ci_placeholder:ci_placeholder@127.0.0.1:5432/ci_placeholder?schema=public" pnpm install --frozen-lockfile
 
       - name: Prisma schema
-        run: pnpm run db:validate
+        run: DATABASE_URL="postgresql://ci_placeholder:ci_placeholder@127.0.0.1:5432/ci_placeholder?schema=public" pnpm run db:validate
 
       - name: TypeScript
         run: pnpm run typecheck
