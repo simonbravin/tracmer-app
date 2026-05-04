@@ -13,18 +13,13 @@ jobs:
   check:
     runs-on: ubuntu-latest
     env:
-      # Misma cadena que en Vercel: GitHub → Settings → Secrets and variables → Actions → DATABASE_URL
-      # (Prisma validate/generate resuelven el datasource; no commitees .env con credenciales.)
-      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      # Vercel NO comparte variables con GitHub Actions: son dos entornos distintos.
+      # `prisma validate` y el `prisma generate` del postinstall solo necesitan que exista
+      # una URL con formato válido; no abren conexión a ese host durante validate.
+      # La base real sigue siendo la de Vercel / tu .env local en deploy y en dev.
+      DATABASE_URL: "postgresql://ci_placeholder:ci_placeholder@127.0.0.1:5432/ci_placeholder?schema=public"
     steps:
       - uses: actions/checkout@v4
-
-      - name: Comprobar secret DATABASE_URL
-        run: |
-          if [ -z "${DATABASE_URL}" ]; then
-            echo "::error::Falta el secret DATABASE_URL en GitHub (Settings → Secrets and variables → Actions). Usá la misma cadena que en Vercel/Neon. El .env local no se sube al runner; no hace falta commitearlo."
-            exit 1
-          fi
 
       # Sin `version`: usa `packageManager` del package.json (pnpm@9.15.4).
       - uses: pnpm/action-setup@v4
