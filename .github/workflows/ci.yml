@@ -19,6 +19,13 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Comprobar secret DATABASE_URL
+        run: |
+          if [ -z "${DATABASE_URL}" ]; then
+            echo "::error::Falta el secret DATABASE_URL en GitHub (Settings → Secrets and variables → Actions). Usá la misma cadena que en Vercel/Neon. El .env local no se sube al runner; no hace falta commitearlo."
+            exit 1
+          fi
+
       # Sin `version`: usa `packageManager` del package.json (pnpm@9.15.4).
       - uses: pnpm/action-setup@v4
 
