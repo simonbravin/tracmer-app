@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 
+import { TransactionsDateSortToggle } from "@/components/treasury/transactions-date-sort";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { DataTableSurface } from "@/components/ui/data-table-surface";
@@ -36,6 +37,7 @@ type SearchP = {
   moneda?: string;
   ubicacion?: string;
   flujo?: string;
+  orden?: string;
 };
 
 function listHref(p: { page: number; base: SearchP }) {
@@ -46,6 +48,7 @@ function listHref(p: { page: number; base: SearchP }) {
   if (p.base.moneda) s.set("moneda", p.base.moneda);
   if (p.base.ubicacion) s.set("ubicacion", p.base.ubicacion);
   if (p.base.flujo && p.base.flujo !== "todos") s.set("flujo", p.base.flujo);
+  if (p.base.orden && p.base.orden !== "desc") s.set("orden", p.base.orden);
   s.set("page", String(p.page));
   return `/tesoreria/transacciones?${s.toString()}`;
 }
@@ -57,6 +60,8 @@ export function TransactionsTable({
   pageSize,
   range,
   searchParams,
+  totalsByCurrency,
+  ordenFecha,
 }: {
   rows: TransactionFeedRow[];
   total: number;
@@ -64,6 +69,8 @@ export function TransactionsTable({
   pageSize: number;
   range: { desde: string; hasta: string };
   searchParams: SearchP;
+  totalsByCurrency: { ARS: string; USD: string };
+  ordenFecha: "asc" | "desc";
 }) {
   if (rows.length === 0) {
     return (
@@ -77,11 +84,24 @@ export function TransactionsTable({
   const hasNext = page < pages;
   return (
     <div className="space-y-3">
+      <div className="text-muted-foreground flex flex-wrap items-center gap-x-6 gap-y-1 text-sm">
+        <span>
+          <span className="font-medium text-foreground">Total neto ARS:</span>{" "}
+          {formatMoney(totalsByCurrency.ARS, "ARS")}
+        </span>
+        <span>
+          <span className="font-medium text-foreground">Total neto USD:</span>{" "}
+          {formatMoney(totalsByCurrency.USD, "USD")}
+        </span>
+        <span className="text-xs">Ingresos menos egresos; movimientos internos no suman.</span>
+      </div>
       <DataTableSurface>
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Fecha</TableHead>
+              <TableHead className="w-[9rem]">
+                <TransactionsDateSortToggle currentOrden={ordenFecha} />
+              </TableHead>
               <TableHead>Origen</TableHead>
               <TableHead className="hidden md:table-cell">Ubicación</TableHead>
               <TableHead>Flujo</TableHead>

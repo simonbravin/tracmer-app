@@ -42,7 +42,7 @@ export async function createTreasuryLocationAction(
   if (!org.ok) {
     return { success: false, error: "Necesitás una organización asignada." };
   }
-  const denied = await enforcePermission(org.ctx, P.treasury.create);
+  const denied = await enforcePermission(org.ctx, P.treasury_locations.create);
   if (denied) {
     return { success: false, error: denied };
   }
@@ -101,7 +101,7 @@ export async function createTreasuryManualMovementAction(
   if (!org.ok) {
     return { success: false, error: "Necesitás una organización asignada." };
   }
-  const denied = await enforcePermission(org.ctx, P.treasury.create);
+  const denied = await enforcePermission(org.ctx, P.treasury_transactions.create);
   if (denied) {
     return { success: false, error: denied };
   }
@@ -166,4 +166,125 @@ export async function createTreasuryManualMovementAction(
   revalidatePath("/tesoreria/ubicaciones");
   revalidatePath("/tablero");
   redirect("/tesoreria/transacciones");
+}
+
+const manualUpdateSchema = manualSchema.extend({
+  id: z.string().cuid(),
+});
+
+export async function updateTreasuryManualMovementAction(
+  _prev: TreasuryActionState | null,
+  formData: FormData,
+): Promise<TreasuryActionState> {
+  const org = await requireOrganizationContext();
+  if (!org.ok) {
+    return { success: false, error: "Necesitás una organización asignada." };
+  }
+  const denied = await enforcePermission(org.ctx, P.treasury_transactions.edit);
+  if (denied) {
+    return { success: false, error: denied };
+  }
+  const raw = Object.fromEntries(formData.entries()) as Record<string, string>;
+  const p = manualUpdateSchema.safeParse({
+    id: raw.id,
+    treasuryLocationId: raw.treasuryLocationId,
+    movementDate: raw.movementDate,
+    amount: raw.amount,
+    currencyCode: raw.currencyCode,
+    direction: raw.direction,
+    memo: raw.memo || null,
+  });
+  if (!p.success) {
+    const fe: Record<string, string> = {};
+    for (const i of p.error.issues) {
+      const k = i.path[0];
+      if (typeof k === "string") fe[k] = i.message;
+    }
+    return { success: false, error: "Revisá los campos", fieldErrors: fe };
+  }
+  const d = p.data;
+  const t = dateToYmdUtc(new Date());
+  if (d.movementDate > t) {
+    return { success: false, error: "La fecha no puede ser futura.", fieldErrors: { movementDate: "Futura" } };
+  }
+  const amt = new Prisma.Decimal(d.amount.includes(",") && !d.amount.includes(".") ? d.amount.replace(",", ".") : d.amount);
+  if (amt.lte(0)) {
+    return { success: false, error: "El monto debe ser mayor a 0." };
+  }
+  const ex = await prisma.treasuryManualMovement.findFirst({
+    where: { id: d.id, organizationId: org.ctx.organizationId, deletedAt: null },
+    select: { id: true },
+  });
+  if (!ex) {
+    return { success: false, error: "Movimiento no encontrado o archivado." };
+  }
+  const loc = await prisma.treasuryLocation.findFirst({
+    where: {
+      id: d.treasuryLocationId,
+      organizationId: org.ctx.organizationId,
+      deletedAt: null,
+      kind: { not: "bank" },
+    },
+    select: { id: true, currencyCode: true },
+  });
+  if (!loc) {
+    return { success: false, error: "Ubicación no válida (solo caja o billetera, no cuenta bancaria)." };
+  }
+  if (loc.currencyCode !== (d.currencyCode as CurrencyCode)) {
+    return { success: false, error: "La moneda debe coincidir con la ubicación." };
+  }
+  try {
+    await prisma.treasuryManualMovement.update({
+      where: { id: ex.id },
+      data: {
+        treasuryLocationId: loc.id,
+        movementDate: parseBankDate(d.movementDate),
+        amount: amt,
+        currencyCode: d.currencyCode as CurrencyCode,
+        direction: d.direction,
+        memo: d.memo?.trim() || null,
+      },
+    });
+  } catch (e) {
+    return { success: false, error: mapErr(e) };
+  }
+  revalidatePath("/tesoreria/transacciones");
+  revalidatePath("/tesoreria/movimientos/" + d.id);
+  revalidatePath("/tesoreria/movimientos/" + d.id + "/editar");
+  revalidatePath("/tesoreria/ubicaciones");
+  revalidatePath("/tablero");
+  redirect(`/tesoreria/movimientos/${d.id}`);
+}
+
+export type ArchiveTreasuryManualState = { success: true } | { success: false; error: string };
+
+export async function archiveTreasuryManualMovement(id: string): Promise<ArchiveTreasuryManualState> {
+  const org = await requireOrganizationContext();
+  if (!org.ok) {
+    return { success: false, error: "Necesitás una organización asignada." };
+  }
+  const denied = await enforcePermission(org.ctx, P.treasury_transactions.archive);
+  if (denied) {
+    return { success: false, error: denied };
+  }
+  const ex = await prisma.treasuryManualMovement.findFirst({
+    where: { id, organizationId: org.ctx.organizationId, deletedAt: null },
+    select: { id: true },
+  });
+  if (!ex) {
+    return { success: false, error: "Movimiento no encontrado o ya archivado." };
+  }
+  try {
+    await prisma.treasuryManualMovement.update({
+      where: { id: ex.id },
+      data: { deletedAt: new Date() },
+    });
+  } catch (e) {
+    return { success: false, error: mapErr(e) };
+  }
+  revalidatePath("/tesoreria/transacciones");
+  revalidatePath("/tesoreria/movimientos/" + id);
+  revalidatePath("/tesoreria/ubicaciones");
+  revalidatePath("/tablero");
+  return { success: true };
 }

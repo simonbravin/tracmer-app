@@ -51,6 +51,15 @@ export async function getTreasuryLocationById(organizationId: string, id: string
   });
 }
 
+export async function getTreasuryManualMovementById(organizationId: string, id: string) {
+  return prisma.treasuryManualMovement.findFirst({
+    where: { id, organizationId },
+    include: {
+      treasuryLocation: { select: { id: true, displayName: true, kind: true, currencyCode: true } },
+    },
+  });
+}
+
 export async function createTreasuryLocationNonBank(
   organizationId: string,
   input: {

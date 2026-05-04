@@ -15,6 +15,7 @@ export const transactionFeedQuerySchema = z.object({
     z.string().cuid().optional(),
   ),
   flujo: z.enum(["todos", "ingreso", "egreso", "interno"]).default("todos"),
+  orden: z.enum(["asc", "desc"]).default("desc"),
   page: z.preprocess(
     (v) => (v === undefined || v === "" || v == null ? 1 : Number(v)),
     z.number().int().min(1),
@@ -44,6 +45,7 @@ export function parseTransactionFeedSearchParams(raw: Record<string, string | st
     moneda: singleParam(raw, "moneda"),
     ubicacion: singleParam(raw, "ubicacion"),
     flujo: singleParam(raw, "flujo"),
+    orden: singleParam(raw, "orden"),
     page: singleParam(raw, "page"),
     pageSize: singleParam(raw, "pageSize"),
   });

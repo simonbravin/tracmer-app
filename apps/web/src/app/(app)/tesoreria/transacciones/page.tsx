@@ -3,11 +3,9 @@ import Link from "next/link";
 import { Plus } from "lucide-react";
 
 import { NoOrganizationMessage } from "@/components/clients/no-organization-message";
-import { PageHeader } from "@/components/common/page-header";
 import { TransactionsFilters } from "@/components/treasury/transactions-filters";
 import { TransactionsTable } from "@/components/treasury/transactions-table";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { getAppRequestContext } from "@/lib/auth/app-context";
 import { P } from "@/lib/permissions/keys";
 import { hasPermission } from "@/lib/permissions/server";
@@ -38,20 +36,22 @@ export default async function TransaccionesPage({
   const ctx = await getAppRequestContext();
   if (!ctx?.currentOrganizationId || !ctx.primaryMembership) {
     return (
-      <div className="max-w-6xl space-y-4">
-        <PageHeader title="Transacciones" description="Movimientos unificados." />
+      <div className="space-y-4">
+        <h1 className="text-2xl font-semibold tracking-tight">Transacciones</h1>
+        <p className="text-muted-foreground text-sm">Movimientos unificados.</p>
         <NoOrganizationMessage />
       </div>
     );
   }
   const orgId = ctx.currentOrganizationId;
   const role = ctx.primaryMembership.role;
-  const canView = await hasPermission(orgId, role.id, role.code, P.treasury.view);
+  const canView = await hasPermission(orgId, role.id, role.code, P.treasury_transactions.view);
   if (!canView) {
     return (
-      <div className="max-w-6xl space-y-4">
-        <PageHeader title="Transacciones" description="Movimientos unificados." />
-        <p className="text-muted-foreground text-sm">No tenés permiso para ver tesorería.</p>
+      <div className="space-y-4">
+        <h1 className="text-2xl font-semibold tracking-tight">Transacciones</h1>
+        <p className="text-muted-foreground text-sm">Movimientos unificados.</p>
+        <p className="text-muted-foreground text-sm">No tenés permiso para ver transacciones de tesorería.</p>
       </div>
     );
   }
@@ -63,6 +63,7 @@ export default async function TransaccionesPage({
     moneda: single(sp, "moneda"),
     ubicacion: single(sp, "ubicacion"),
     flujo: single(sp, "flujo"),
+    orden: single(sp, "orden"),
     page: single(sp, "page"),
     pageSize: single(sp, "pageSize"),
   };
@@ -81,7 +82,7 @@ export default async function TransaccionesPage({
     currencyCode: l.currencyCode,
   }));
 
-  const canCreate = await hasPermission(orgId, role.id, role.code, P.treasury.create);
+  const canCreate = await hasPermission(orgId, role.id, role.code, P.treasury_transactions.create);
 
   const desde = q.desde ?? "";
   const hasta = q.hasta ?? "";
@@ -93,12 +94,29 @@ export default async function TransaccionesPage({
     moneda: q.moneda,
     ubicacion: q.ubicacion,
     flujo: q.flujo,
+    orden: q.orden,
   };
 
   if (!feed.ok) {
     return (
-      <div className="max-w-6xl space-y-6">
-        <PageHeader title="Transacciones" description="Movimientos unificados." />
+      <div className="space-y-6">
+        <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
+          <div>
+            <h1 className="text-2xl font-semibold tracking-tight">Transacciones</h1>
+            <p className="text-muted-foreground text-sm">
+              Vista efectivo (caja y banco) u operativo (cobranzas y gastos). Sin duplicar montos en base: lectura
+              compuesta.
+            </p>
+          </div>
+          {canCreate ? (
+            <Button asChild>
+              <Link href="/tesoreria/movimientos/nuevo" className="inline-flex">
+                <Plus className="h-4 w-4" />
+                Movimiento manual
+              </Link>
+            </Button>
+          ) : null}
+        </div>
         <p className="text-destructive text-sm">{feed.error}</p>
         <TransactionsFilters
           defaultVista={q.vista}
@@ -107,6 +125,7 @@ export default async function TransaccionesPage({
           defaultMoneda={q.moneda ?? ""}
           defaultUbicacion={q.ubicacion ?? ""}
           defaultFlujo={q.flujo}
+          defaultOrden={q.orden}
           locations={locOpts}
         />
       </div>
@@ -114,14 +133,16 @@ export default async function TransaccionesPage({
   }
 
   return (
-    <div className="max-w-6xl space-y-6">
+    <div className="space-y-6">
       <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
-        <PageHeader
-          title="Transacciones"
-          description="Vista efectivo (caja y banco) u operativo (cobranzas y gastos). Sin duplicar montos en base: lectura compuesta."
-        />
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight">Transacciones</h1>
+          <p className="text-muted-foreground text-sm">
+            Vista efectivo (caja y banco) u operativo (cobranzas y gastos). Sin duplicar montos en base: lectura compuesta.
+          </p>
+        </div>
         {canCreate ? (
-          <Button asChild variant="outline">
+          <Button asChild>
             <Link href="/tesoreria/movimientos/nuevo" className="inline-flex">
               <Plus className="h-4 w-4" />
               Movimiento manual
@@ -130,26 +151,16 @@ export default async function TransaccionesPage({
         ) : null}
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg">Filtros</CardTitle>
-          <CardDescription>
-            Rango máximo 366 días. Vista operativo no filtra por ubicación (cobranza aún no imputa caja hasta
-            conciliar/depositar).
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <TransactionsFilters
-            defaultVista={q.vista}
-            defaultDesde={feed.range.desde}
-            defaultHasta={feed.range.hasta}
-            defaultMoneda={q.moneda ?? ""}
-            defaultUbicacion={q.ubicacion ?? ""}
-            defaultFlujo={q.flujo}
-            locations={locOpts}
-          />
-        </CardContent>
-      </Card>
+      <TransactionsFilters
+        defaultVista={q.vista}
+        defaultDesde={feed.range.desde}
+        defaultHasta={feed.range.hasta}
+        defaultMoneda={q.moneda ?? ""}
+        defaultUbicacion={q.ubicacion ?? ""}
+        defaultFlujo={q.flujo}
+        defaultOrden={q.orden}
+        locations={locOpts}
+      />
 
       <TransactionsTable
         rows={feed.rows}
@@ -158,6 +169,8 @@ export default async function TransaccionesPage({
         pageSize={feed.pageSize}
         range={feed.range}
         searchParams={searchParamsForTable}
+        totalsByCurrency={feed.totalsByCurrency}
+        ordenFecha={q.orden}
       />
     </div>
   );

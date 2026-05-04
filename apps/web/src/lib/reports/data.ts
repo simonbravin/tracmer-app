@@ -13,12 +13,15 @@ import { shortInvoiceDateRangeArUtc } from "@/lib/sales/format";
 
 import type { z } from "zod";
 
+import { listTransactionRowsForReport } from "@/lib/treasury/transactions-feed";
+
 import {
   type ExportRequest,
   clientesReportFilterSchema,
   cobranzasReportFilterSchema,
   conciliacionesReportFilterSchema,
   depositosReportFilterSchema,
+  transaccionesTesoreriaReportFilterSchema,
   ventasReportFilterSchema,
 } from "./validation";
 
@@ -48,6 +51,7 @@ export type ReportTable = {
 type VentasF = z.infer<typeof ventasReportFilterSchema>;
 type CobF = z.infer<typeof cobranzasReportFilterSchema>;
 type DepF = z.infer<typeof depositosReportFilterSchema>;
+type TxTesF = z.infer<typeof transaccionesTesoreriaReportFilterSchema>;
 type ConF = z.infer<typeof conciliacionesReportFilterSchema>;
 type ClF = z.infer<typeof clientesReportFilterSchema>;
 
@@ -396,6 +400,62 @@ export async function buildClientesTable(organizationId: string, f: ClF, options
   };
 }
 
+const ORIGIN_REPORT_LABEL: Record<string, string> = {
+  deposito_bancario: "Depósito",
+  transferencia: "Transferencia",
+  cobranza: "Cobranza",
+  gasto_cobranza: "Gasto cobranza",
+  movimiento_manual: "Manual",
+};
+
+const FLOW_REPORT_LABEL: Record<string, string> = {
+  ingreso: "Ingreso",
+  egreso: "Egreso",
+  interno: "Interno",
+};
+
+export async function buildTransaccionesTesoreriaTable(
+  organizationId: string,
+  f: TxTesF,
+  options?: { limit?: number },
+): Promise<ReportTable> {
+  const limit = Math.min(options?.limit ?? MAX_ROWS, MAX_ROWS);
+  const res = await listTransactionRowsForReport(organizationId, {
+    vista: f.vista,
+    desde: f.desde,
+    hasta: f.hasta,
+    moneda: f.moneda,
+    ubicacion: f.ubicacion,
+    flujo: f.flujo,
+    visibilidad: f.visibilidad,
+    orden: f.orden,
+  });
+  if (!res.ok) {
+    return {
+      title: "Transacciones de tesorería",
+      headers: ["Mensaje"],
+      rows: [[`No se pudo generar: ${res.error}`]],
+      truncated: false,
+    };
+  }
+  const all = res.rows;
+  const truncated = all.length > limit;
+  const items = truncated ? all.slice(0, limit) : all;
+  const headers = ["Fecha", "Origen", "Título", "Detalle", "Ubicación", "Flujo", "Monto", "Moneda", "Id fila"];
+  const rows: string[][] = items.map((r) => [
+    r.documentDate,
+    ORIGIN_REPORT_LABEL[r.origin] ?? r.origin,
+    r.title,
+    r.subtitle ?? "",
+    r.treasuryLocationLabel ?? "",
+    FLOW_REPORT_LABEL[r.flow] ?? r.flow,
+    r.amount,
+    r.currencyCode,
+    r.id,
+  ]);
+  return { title: "Transacciones de tesorería", headers, rows, truncated };
+}
+
 export type ReportRunInput = Omit<ExportRequest, "format">;
 
 /**
@@ -409,6 +469,8 @@ export async function runReport(organizationId: string, input: ReportRunInput, o
       return buildCobranzasTable(organizationId, input.filter as CobF, opt);
     case "depositos":
       return buildDepositosTable(organizationId, input.filter as DepF, opt);
+    case "transacciones_tesoreria":
+      return buildTransaccionesTesoreriaTable(organizationId, input.filter as TxTesF, opt);
     case "conciliaciones":
       return buildConciliacionesTable(organizationId, input.filter as ConF, opt);
     case "clientes":

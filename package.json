@@ -10,7 +10,7 @@
     "check": "pnpm run db:validate && pnpm run typecheck && pnpm run lint",
     "db:generate": "pnpm --filter @tracmer-app/database prisma:generate",
     "db:validate": "pnpm --filter @tracmer-app/database prisma:validate",
-    "db:migrate:deploy": "dotenv -e .env -- pnpm --filter @tracmer-app/database exec prisma migrate deploy"
+    "db:migrate:deploy": "dotenv -e .env -o -- pnpm --filter @tracmer-app/database exec prisma migrate deploy"
   },
   "engines": {
     "node": ">=18.18.0",

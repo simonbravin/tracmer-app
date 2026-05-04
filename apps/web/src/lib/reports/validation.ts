@@ -60,6 +60,23 @@ export const depositosReportFilterSchema = reportDateFilterObject
   })
   .refine((d) => d.desde <= d.hasta, orderDesdeHasta);
 
+const vistaTes = z.enum(["efectivo", "operativo"] as const);
+const flujoTes = z.enum(["todos", "ingreso", "egreso", "interno"] as const);
+
+export const transaccionesTesoreriaReportFilterSchema = reportDateFilterObject
+  .extend({
+    visibilidad: vis.default("activas"),
+    vista: vistaTes.default("efectivo"),
+    moneda: currency,
+    ubicacion: z
+      .string()
+      .optional()
+      .transform((s) => (s == null || s === "" ? undefined : s)),
+    flujo: flujoTes.default("todos"),
+    orden: z.enum(["asc", "desc"] as const).default("desc"),
+  })
+  .refine((d) => d.desde <= d.hasta, orderDesdeHasta);
+
 export const conciliacionesReportFilterSchema = reportDateFilterObject
   .extend({
     visibilidad: vis.default("activas"),
@@ -81,6 +98,11 @@ export const exportRequestSchema = z.discriminatedUnion("report", [
   z.object({ format: z.enum(["xlsx", "pdf", "csv"]), report: z.literal("depositos"), filter: depositosReportFilterSchema }),
   z.object({
     format: z.enum(["xlsx", "pdf", "csv"]),
+    report: z.literal("transacciones_tesoreria"),
+    filter: transaccionesTesoreriaReportFilterSchema,
+  }),
+  z.object({
+    format: z.enum(["xlsx", "pdf", "csv"]),
     report: z.literal("conciliaciones"),
     filter: conciliacionesReportFilterSchema,
   }),
@@ -92,6 +114,11 @@ export type ExportRequest =
   | { format: "xlsx" | "pdf" | "csv"; report: "ventas"; filter: z.infer<typeof ventasReportFilterSchema> }
   | { format: "xlsx" | "pdf" | "csv"; report: "cobranzas"; filter: z.infer<typeof cobranzasReportFilterSchema> }
   | { format: "xlsx" | "pdf" | "csv"; report: "depositos"; filter: z.infer<typeof depositosReportFilterSchema> }
+  | {
+      format: "xlsx" | "pdf" | "csv";
+      report: "transacciones_tesoreria";
+      filter: z.infer<typeof transaccionesTesoreriaReportFilterSchema>;
+    }
   | { format: "xlsx" | "pdf" | "csv"; report: "conciliaciones"; filter: z.infer<typeof conciliacionesReportFilterSchema> }
   | { format: "xlsx" | "pdf" | "csv"; report: "clientes"; filter: z.infer<typeof clientesReportFilterSchema> };
 
@@ -153,6 +180,20 @@ export function parseDepositosFilters(sp: URLSearchParams) {
     visibilidad: (sp.get("visibilidad") as "activas" | "archivadas" | "todas") || "activas",
     bankAccountId: sp.get("cuenta") || undefined,
     moneda: (sp.get("moneda") || undefined) as "ARS" | "USD" | undefined,
+  });
+}
+
+export function parseTransaccionesTesoreriaFilters(sp: URLSearchParams) {
+  const dr = defaultDateRangeYmd();
+  return transaccionesTesoreriaReportFilterSchema.safeParse({
+    desde: sp.get("desde") || dr.desde,
+    hasta: sp.get("hasta") || dr.hasta,
+    visibilidad: (sp.get("visibilidad") as "activas" | "archivadas" | "todas") || "activas",
+    vista: (sp.get("vista") as "efectivo" | "operativo") || "efectivo",
+    moneda: (sp.get("moneda") || undefined) as "ARS" | "USD" | undefined,
+    ubicacion: sp.get("ubicacion") || undefined,
+    flujo: (sp.get("flujo") as "todos" | "ingreso" | "egreso" | "interno") || "todos",
+    orden: (sp.get("orden") as "asc" | "desc") || "desc",
   });
 }
 

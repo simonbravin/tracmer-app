@@ -27,8 +27,10 @@ import {
   parseCobranzasFilters,
   parseConciliacionesFilters,
   parseDepositosFilters,
+  parseTransaccionesTesoreriaFilters,
   parseVentasFilters,
 } from "@/lib/reports/validation";
+import { listTreasuryLocationsForOrg } from "@/lib/treasury/data";
 import { listActiveClients } from "@/lib/sales/data";
 import { labelSaleStatus, saleStatusesForList } from "@/lib/sales/status";
 
@@ -68,6 +70,19 @@ function resolveFilter(reportKey: ReportKey, sp: URLSearchParams) {
       return p.success
         ? p.data
         : { desde: dr.desde, hasta: dr.hasta, visibilidad: "activas" as const };
+    }
+    case "transacciones_tesoreria": {
+      const p = parseTransaccionesTesoreriaFilters(sp);
+      return p.success
+        ? p.data
+        : {
+            desde: dr.desde,
+            hasta: dr.hasta,
+            visibilidad: "activas" as const,
+            vista: "efectivo" as const,
+            flujo: "todos" as const,
+            orden: "desc" as const,
+          };
     }
     case "conciliaciones": {
       const p = parseConciliacionesFilters(sp);
@@ -120,6 +135,8 @@ export default async function ReporteDetallePage({ params, searchParams }: P) {
   const table = await runReport(orgId, runInput, { limit: 50 });
   const clients = reportKey === "ventas" || reportKey === "cobranzas" ? await listActiveClients(orgId) : [];
   const cuentas = reportKey === "depositos" ? await listBankAccountsForFilter(orgId) : [];
+  const ubicaciones =
+    reportKey === "transacciones_tesoreria" ? await listTreasuryLocationsForOrg(orgId) : [];
 
   return (
     <div className="max-w-6xl space-y-6">
@@ -248,6 +265,72 @@ export default async function ReporteDetallePage({ params, searchParams }: P) {
                       {c.name} · {c.bankName}
                     </option>
                   ))}
+                </select>
+              </div>
+              <div>
+                <Label>Moneda</Label>
+                <select
+                  name="moneda"
+                  className="border-input bg-background mt-1 h-9 w-full rounded-md border px-2 text-sm"
+                  defaultValue={sp.get("moneda") || ""}
+                >
+                  <option value="">(todas)</option>
+                  <option value="ARS">ARS</option>
+                  <option value="USD">USD</option>
+                </select>
+              </div>
+            </>
+          )}
+          {reportKey === "transacciones_tesoreria" && (
+            <>
+              <div>
+                <Label>Vista</Label>
+                <select
+                  name="vista"
+                  className="border-input bg-background mt-1 h-9 w-full rounded-md border px-2 text-sm"
+                  defaultValue={sp.get("vista") || "efectivo"}
+                >
+                  <option value="efectivo">Efectivo (banco + manuales)</option>
+                  <option value="operativo">Operativo (cobranzas y gastos)</option>
+                </select>
+              </div>
+              <div>
+                <Label>Ubicación</Label>
+                <select
+                  name="ubicacion"
+                  className="border-input bg-background mt-1 h-9 w-full rounded-md border px-2 text-sm"
+                  defaultValue={sp.get("ubicacion") || ""}
+                >
+                  <option value="">(todas)</option>
+                  {ubicaciones.map((u) => (
+                    <option key={u.id} value={u.id}>
+                      {u.displayName} ({u.currencyCode})
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <Label>Flujo</Label>
+                <select
+                  name="flujo"
+                  className="border-input bg-background mt-1 h-9 w-full rounded-md border px-2 text-sm"
+                  defaultValue={sp.get("flujo") || "todos"}
+                >
+                  <option value="todos">Todos</option>
+                  <option value="ingreso">Ingreso</option>
+                  <option value="egreso">Egreso</option>
+                  <option value="interno">Interno</option>
+                </select>
+              </div>
+              <div>
+                <Label>Orden por fecha</Label>
+                <select
+                  name="orden"
+                  className="border-input bg-background mt-1 h-9 w-full rounded-md border px-2 text-sm"
+                  defaultValue={sp.get("orden") || "desc"}
+                >
+                  <option value="desc">Más recientes primero</option>
+                  <option value="asc">Más antiguos primero</option>
                 </select>
               </div>
               <div>

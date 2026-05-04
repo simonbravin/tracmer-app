@@ -13,7 +13,7 @@ const initial: TreasuryActionState | null = null;
 export function TreasuryLocationForm() {
   const [state, action] = useFormState(createTreasuryLocationAction, initial);
   return (
-    <form action={action} className="grid max-w-lg gap-4">
+    <form action={action} className="grid gap-4">
       {state && !state.success ? (
         <p className="text-destructive text-sm">{state.error}</p>
       ) : null}
@@ -23,7 +23,7 @@ export function TreasuryLocationForm() {
           id="kind-tl"
           name="kind"
           required
-          className="border-input bg-background ring-offset-background focus-visible:ring-ring h-9 w-full rounded-md border px-2 text-sm focus-visible:outline-none focus-visible:ring-2"
+          className="border-input bg-background ring-offset-background focus-visible:ring-ring h-9 w-full rounded-md border px-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2"
         >
           <option value="cash">Caja / efectivo</option>
           <option value="electronic_wallet">Billetera electrónica</option>
@@ -42,7 +42,7 @@ export function TreasuryLocationForm() {
           id="ccy-tl"
           name="currencyCode"
           required
-          className="border-input bg-background ring-offset-background focus-visible:ring-ring h-9 w-full rounded-md border px-2 text-sm focus-visible:outline-none focus-visible:ring-2"
+          className="border-input bg-background ring-offset-background focus-visible:ring-ring h-9 w-full rounded-md border px-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2"
         >
           <option value="ARS">ARS</option>
           <option value="USD">USD</option>

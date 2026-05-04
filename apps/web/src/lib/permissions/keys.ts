@@ -25,10 +25,16 @@ export const P = {
     create: "banks.create",
     edit: "banks.edit",
   },
-  treasury: {
-    view: "treasury.view",
-    create: "treasury.create",
-    edit: "treasury.edit",
+  treasury_transactions: {
+    view: "treasury_transactions.view",
+    create: "treasury_transactions.create",
+    edit: "treasury_transactions.edit",
+    archive: "treasury_transactions.archive",
+  },
+  treasury_locations: {
+    view: "treasury_locations.view",
+    create: "treasury_locations.create",
+    edit: "treasury_locations.edit",
   },
   reconciliations: {
     view: "reconciliations.view",

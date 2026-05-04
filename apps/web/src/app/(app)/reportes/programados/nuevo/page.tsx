@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { getAppRequestContext } from "@/lib/auth/app-context";
 import { listBankAccountsForFilter } from "@/lib/banks/data";
 import { listActiveClients } from "@/lib/sales/data";
+import { listTreasuryLocationsForOrg } from "@/lib/treasury/data";
 
 export const dynamic = "force-dynamic";
 
@@ -26,9 +27,10 @@ export default async function NuevaProgramacionPage() {
       </div>
     );
   }
-  const [clients, accounts] = await Promise.all([
+  const [clients, accounts, ubicaciones] = await Promise.all([
     listActiveClients(ctx.currentOrganizationId),
     listBankAccountsForFilter(ctx.currentOrganizationId),
+    listTreasuryLocationsForOrg(ctx.currentOrganizationId),
   ]);
   return (
     <div className="max-w-3xl space-y-6">
@@ -47,6 +49,10 @@ export default async function NuevaProgramacionPage() {
         bankAccounts={accounts.map((a) => ({
           id: a.id,
           label: `${a.name} (${a.currencyCode})`,
+        }))}
+        treasuryLocations={ubicaciones.map((u) => ({
+          id: u.id,
+          label: `${u.displayName} (${u.currencyCode})`,
         }))}
         defaultValues={{}}
       />

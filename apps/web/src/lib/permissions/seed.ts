@@ -46,20 +46,20 @@ function defaultPermissionAllowed(roleCode: string, moduleCode: string, actionCo
   if (moduleCode === "collections" && actionCode === "archive") return false;
   if (moduleCode === "reconciliations" && actionCode === "archive") return false;
   if (moduleCode === "reports" && actionCode === "send") return false;
+  if (roleCode === "operativo" && moduleCode === "treasury_transactions" && actionCode === "archive") return false;
   return true;
 }
 
 /**
- * Sincroniza módulo `treasury` y permisos con los de `banks` por cada rol con membresía activa en la org.
- * Idempotente en datos: upsert por (org, rol, definición); debe ejecutarse cuando cambian permisos de bancos
- * para que tesorería siga el mismo criterio de acceso.
+ * Sincroniza módulos de tesorería y permisos con los de `banks` por cada rol con membresía activa en la org.
  */
 export async function syncTreasuryPermissionsFromBanks(organizationId: string, db: Tx | typeof prisma = prisma) {
-  const [banksMod, treasuryMod] = await Promise.all([
+  const [banksMod, txMod, locMod] = await Promise.all([
     db.appModule.findUnique({ where: { code: "banks" } }),
-    db.appModule.findUnique({ where: { code: "treasury" } }),
+    db.appModule.findUnique({ where: { code: "treasury_transactions" } }),
+    db.appModule.findUnique({ where: { code: "treasury_locations" } }),
   ]);
-  if (!banksMod || !treasuryMod) return;
+  if (!banksMod || !txMod || !locMod) return;
 
   const roleIds = await db.membership.findMany({
     where: { organizationId, deletedAt: null },
@@ -67,12 +67,12 @@ export async function syncTreasuryPermissionsFromBanks(organizationId: string, d
     distinct: ["roleId"],
   });
 
-  const treasuryDefs = await db.permissionDefinition.findMany({
-    where: { moduleId: treasuryMod.id },
-  });
-  if (treasuryDefs.length === 0) return;
+  const txDefs = await db.permissionDefinition.findMany({ where: { moduleId: txMod.id } });
+  const locDefs = await db.permissionDefinition.findMany({ where: { moduleId: locMod.id } });
+  if (txDefs.length === 0 || locDefs.length === 0) return;
 
-  const treasuryByAction = new Map(treasuryDefs.map((d) => [d.actionCode, d.id]));
+  const txByAction = new Map(txDefs.map((d) => [d.actionCode, d.id]));
+  const locByAction = new Map(locDefs.map((d) => [d.actionCode, d.id]));
 
   for (const { roleId } of roleIds) {
     const bankEnabled = await db.organizationRoleEnabledModule.findUnique({
@@ -84,27 +84,28 @@ export async function syncTreasuryPermissionsFromBanks(organizationId: string, d
         },
       },
     });
-    await db.organizationRoleEnabledModule.upsert({
-      where: {
-        organizationId_roleId_moduleId: {
+    const enabled = bankEnabled?.isEnabled ?? true;
+    for (const mod of [txMod, locMod]) {
+      await db.organizationRoleEnabledModule.upsert({
+        where: {
+          organizationId_roleId_moduleId: {
+            organizationId,
+            roleId,
+            moduleId: mod.id,
+          },
+        },
+        create: {
           organizationId,
           roleId,
-          moduleId: treasuryMod.id,
+          moduleId: mod.id,
+          isEnabled: enabled,
         },
-      },
-      create: {
-        organizationId,
-        roleId,
-        moduleId: treasuryMod.id,
-        isEnabled: bankEnabled?.isEnabled ?? true,
-      },
-      update: { isEnabled: bankEnabled?.isEnabled ?? true },
-    });
+        update: { isEnabled: enabled },
+      });
+    }
 
     const bankDefs = await db.permissionDefinition.findMany({ where: { moduleId: banksMod.id } });
     for (const bd of bankDefs) {
-      const treasuryDefId = treasuryByAction.get(bd.actionCode);
-      if (!treasuryDefId) continue;
       const bankPerm = await db.organizationRolePermission.findUnique({
         where: {
           organizationId_roleId_permissionDefinitionId: {
@@ -114,21 +115,74 @@ export async function syncTreasuryPermissionsFromBanks(organizationId: string, d
           },
         },
       });
+      const allowed = bankPerm?.isAllowed ?? true;
+      const txDefId = txByAction.get(bd.actionCode);
+      if (txDefId) {
+        await db.organizationRolePermission.upsert({
+          where: {
+            organizationId_roleId_permissionDefinitionId: {
+              organizationId,
+              roleId,
+              permissionDefinitionId: txDefId,
+            },
+          },
+          create: {
+            organizationId,
+            roleId,
+            permissionDefinitionId: txDefId,
+            isAllowed: allowed,
+          },
+          update: { isAllowed: allowed },
+        });
+      }
+      const locDefId = locByAction.get(bd.actionCode);
+      if (locDefId) {
+        await db.organizationRolePermission.upsert({
+          where: {
+            organizationId_roleId_permissionDefinitionId: {
+              organizationId,
+              roleId,
+              permissionDefinitionId: locDefId,
+            },
+          },
+          create: {
+            organizationId,
+            roleId,
+            permissionDefinitionId: locDefId,
+            isAllowed: allowed,
+          },
+          update: { isAllowed: allowed },
+        });
+      }
+    }
+
+    const editTxId = txByAction.get("edit");
+    const archTxId = txByAction.get("archive");
+    if (editTxId && archTxId) {
+      const editPerm = await db.organizationRolePermission.findUnique({
+        where: {
+          organizationId_roleId_permissionDefinitionId: {
+            organizationId,
+            roleId,
+            permissionDefinitionId: editTxId,
+          },
+        },
+      });
       await db.organizationRolePermission.upsert({
         where: {
           organizationId_roleId_permissionDefinitionId: {
             organizationId,
             roleId,
-            permissionDefinitionId: treasuryDefId,
+            permissionDefinitionId: archTxId,
           },
         },
         create: {
           organizationId,
           roleId,
-          permissionDefinitionId: treasuryDefId,
-          isAllowed: bankPerm?.isAllowed ?? true,
+          permissionDefinitionId: archTxId,
+          isAllowed: editPerm?.isAllowed ?? true,
         },
-        update: { isAllowed: bankPerm?.isAllowed ?? true },
+        update: { isAllowed: editPerm?.isAllowed ?? true },
       });
     }
   }

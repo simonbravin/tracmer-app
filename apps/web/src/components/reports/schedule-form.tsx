@@ -43,12 +43,14 @@ const FR_LABEL: Record<"daily" | "weekly" | "monthly", string> = {
 
 type BankAcc = { id: string; label: string };
 type ClientOpt = { id: string; displayName: string };
+type TreasuryLoc = { id: string; label: string };
 
 type Props = {
   mode: "create" | "edit";
   scheduleId?: string;
   clients: ClientOpt[];
   bankAccounts: BankAcc[];
+  treasuryLocations: TreasuryLoc[];
   defaultValues: Partial<CreateScheduleForm> & { scheduleId?: string };
 };
 
@@ -65,6 +67,10 @@ function buildParameters(
     concStatus: string;
     porFecha: "created" | "closed";
     q: string;
+    txVista: "efectivo" | "operativo";
+    txFlujo: "todos" | "ingreso" | "egreso" | "interno";
+    txOrden: "asc" | "desc";
+    txUbicacionId: string;
   },
 ): CreateScheduleForm["parameters"] {
   if (reportType === "ventas") {
@@ -107,6 +113,22 @@ function buildParameters(
       },
     };
   }
+  if (reportType === "transacciones_tesoreria") {
+    return {
+      report: "transacciones_tesoreria",
+      format,
+      filter: {
+        desde: s.dr.desde,
+        hasta: s.dr.hasta,
+        visibilidad: s.visibilidad,
+        vista: s.txVista,
+        moneda: s.moneda || undefined,
+        ubicacion: s.txUbicacionId || undefined,
+        flujo: s.txFlujo,
+        orden: s.txOrden,
+      },
+    };
+  }
   if (reportType === "conciliaciones") {
     return {
       report: "conciliaciones",
@@ -129,7 +151,7 @@ function buildParameters(
   };
 }
 
-export function ScheduleForm({ mode, scheduleId, clients, bankAccounts, defaultValues }: Props) {
+export function ScheduleForm({ mode, scheduleId, clients, bankAccounts, treasuryLocations, defaultValues }: Props) {
   const dr = defaultDateRangeYmd();
   const r = useRouter();
   const [isPending, start] = useTransition();
@@ -160,7 +182,10 @@ export function ScheduleForm({ mode, scheduleId, clients, bankAccounts, defaultV
   );
   const [moneda, setMoneda] = useState<"" | "ARS" | "USD">(
     p &&
-      (p.report === "ventas" || p.report === "cobranzas" || p.report === "depositos") &&
+      (p.report === "ventas" ||
+        p.report === "cobranzas" ||
+        p.report === "depositos" ||
+        p.report === "transacciones_tesoreria") &&
       "moneda" in p.filter
       ? (p.filter as { moneda?: "ARS" | "USD" }).moneda ?? ""
       : "",
@@ -183,6 +208,19 @@ export function ScheduleForm({ mode, scheduleId, clients, bankAccounts, defaultV
     p && p.report === "clientes" && "q" in p.filter && p.filter.q != null
       ? p.filter.q
       : "",
+  );
+
+  const [txVista, setTxVista] = useState<"efectivo" | "operativo">(
+    p && p.report === "transacciones_tesoreria" ? p.filter.vista : "efectivo",
+  );
+  const [txFlujo, setTxFlujo] = useState<"todos" | "ingreso" | "egreso" | "interno">(
+    p && p.report === "transacciones_tesoreria" ? p.filter.flujo : "todos",
+  );
+  const [txOrden, setTxOrden] = useState<"asc" | "desc">(
+    p && p.report === "transacciones_tesoreria" ? p.filter.orden : "desc",
+  );
+  const [txUbicacionId, setTxUbicacionId] = useState(
+    p && p.report === "transacciones_tesoreria" && p.filter.ubicacion ? p.filter.ubicacion : "",
   );
 
   const [frequency, setFrequency] = useState<"daily" | "weekly" | "monthly">(sch?.frequency ?? "daily");
@@ -212,6 +250,10 @@ export function ScheduleForm({ mode, scheduleId, clients, bankAccounts, defaultV
       concStatus,
       porFecha,
       q,
+      txVista,
+      txFlujo,
+      txOrden,
+      txUbicacionId,
     };
     const base: CreateScheduleForm = {
       name: name.trim(),
@@ -350,7 +392,10 @@ export function ScheduleForm({ mode, scheduleId, clients, bankAccounts, defaultV
                 </select>
               </div>
             )}
-            {(reportType === "ventas" || reportType === "cobranzas" || reportType === "depositos") && (
+            {(reportType === "ventas" ||
+              reportType === "cobranzas" ||
+              reportType === "depositos" ||
+              reportType === "transacciones_tesoreria") && (
               <div>
                 <Label>Moneda (opcional)</Label>
                 <select
@@ -380,6 +425,62 @@ export function ScheduleForm({ mode, scheduleId, clients, bankAccounts, defaultV
                   ))}
                 </select>
               </div>
+            )}
+            {reportType === "transacciones_tesoreria" && (
+              <>
+                <div>
+                  <Label>Vista</Label>
+                  <select
+                    className="mt-1 flex h-9 w-full rounded-md border border-input bg-background px-2 text-sm"
+                    value={txVista}
+                    onChange={(e) => setTxVista(e.target.value as "efectivo" | "operativo")}
+                  >
+                    <option value="efectivo">Efectivo (banco + manuales)</option>
+                    <option value="operativo">Operativo (cobranzas y gastos)</option>
+                  </select>
+                </div>
+                <div>
+                  <Label>Ubicación (opcional)</Label>
+                  <select
+                    className="mt-1 flex h-9 w-full rounded-md border border-input bg-background px-2 text-sm"
+                    value={txUbicacionId}
+                    onChange={(e) => setTxUbicacionId(e.target.value)}
+                  >
+                    <option value="">Todas</option>
+                    {treasuryLocations.map((u) => (
+                      <option key={u.id} value={u.id}>
+                        {u.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <Label>Flujo</Label>
+                  <select
+                    className="mt-1 flex h-9 w-full rounded-md border border-input bg-background px-2 text-sm"
+                    value={txFlujo}
+                    onChange={(e) =>
+                      setTxFlujo(e.target.value as "todos" | "ingreso" | "egreso" | "interno")
+                    }
+                  >
+                    <option value="todos">Todos</option>
+                    <option value="ingreso">Ingreso</option>
+                    <option value="egreso">Egreso</option>
+                    <option value="interno">Interno</option>
+                  </select>
+                </div>
+                <div>
+                  <Label>Orden por fecha</Label>
+                  <select
+                    className="mt-1 flex h-9 w-full rounded-md border border-input bg-background px-2 text-sm"
+                    value={txOrden}
+                    onChange={(e) => setTxOrden(e.target.value as "asc" | "desc")}
+                  >
+                    <option value="desc">Más recientes primero</option>
+                    <option value="asc">Más antiguos primero</option>
+                  </select>
+                </div>
+              </>
             )}
             {reportType === "conciliaciones" && (
               <>

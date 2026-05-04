@@ -465,6 +465,12 @@ La implementación técnica puede ser por fases; el **modelo conceptual** no es 
 
 - Regla dura de producto/ingeniería: **no** crear variantes arbitrarias por pantalla de tablas, formularios, filtros, modales de confirmación ni patrones equivalentes; deben provenir del **sistema reutilizable** (`packages/ui` + tokens), alineado a `ARCHITECTURE.md`.
 
+### 17.5 Tesorería (transacciones, ubicaciones, totales)
+
+- La matriz de permisos distingue **`treasury_transactions`** (feed, movimientos manuales, archivar) y **`treasury_locations`** (ubicaciones de fondos no bancarias). La sincronización desde el módulo **Bancos** aplica a ambos.
+- Los **totales en moneda** del listado de transacciones son **netos** sobre el conjunto filtrado: ingresos suman, egresos restan; movimientos con flujo **interno** no afectan esos totales.
+- El rol **operativo** no recibe por defecto **`treasury_transactions.archive`**.
+
 ---
 
 **Fin del documento.**

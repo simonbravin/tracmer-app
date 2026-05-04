@@ -25,6 +25,19 @@ export type TransactionFeedRow = {
   href: string | null;
 };
 
+export type TransactionVisibility = "activas" | "archivadas" | "todas";
+
+export type TreasuryTransactionReportInput = {
+  vista: "efectivo" | "operativo";
+  desde: string;
+  hasta: string;
+  moneda?: "ARS" | "USD";
+  ubicacion?: string;
+  flujo: "todos" | "ingreso" | "egreso" | "interno";
+  visibilidad: TransactionVisibility;
+  orden: "asc" | "desc";
+};
+
 function ymdUtc(d: Date): string {
   const y = d.getUTCFullYear();
   const m = String(d.getUTCMonth() + 1).padStart(2, "0");
@@ -32,7 +45,7 @@ function ymdUtc(d: Date): string {
   return `${y}-${m}-${day}`;
 }
 
-function dateRangeFromQuery(q: TransactionFeedQuery): { ok: true; gte: Date; lt: Date } | { ok: false; error: string } {
+function dateRangeFromQuery(q: Pick<TransactionFeedQuery, "desde" | "hasta">): { ok: true; gte: Date; lt: Date } | { ok: false; error: string } {
   const today = new Date();
   const ltDefault = new Date(
     Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate() + 1, 12, 0, 0, 0),
@@ -71,20 +84,40 @@ function dateRangeFromQuery(q: TransactionFeedQuery): { ok: true; gte: Date; lt:
   return { ok: true, gte, lt };
 }
 
-export async function listTransactionFeed(
-  organizationId: string,
-  q: TransactionFeedQuery,
-): Promise<
-  | { ok: true; rows: TransactionFeedRow[]; total: number; page: number; pageSize: number; range: { desde: string; hasta: string } }
-  | { ok: false; error: string }
-> {
-  const dr = dateRangeFromQuery(q);
-  if (!dr.ok) {
-    return dr;
-  }
-  const { gte, lt } = dr;
-  const range = { desde: ymdUtc(gte), hasta: ymdUtc(new Date(lt.getTime() - 86400000)) };
+function deletedAtFilter(vis: TransactionVisibility): { deletedAt: null } | { deletedAt: { not: null } } | Record<string, never> {
+  if (vis === "activas") return { deletedAt: null };
+  if (vis === "archivadas") return { deletedAt: { not: null } };
+  return {};
+}
 
+function sortRows(rows: TransactionFeedRow[], orden: "asc" | "desc") {
+  rows.sort((a, b) => {
+    const cmp = a.sortAt < b.sortAt ? -1 : a.sortAt > b.sortAt ? 1 : 0;
+    return orden === "asc" ? cmp : -cmp;
+  });
+}
+
+function netTotalsByCurrency(rows: TransactionFeedRow[]): { ARS: string; USD: string } {
+  let ars = new Prisma.Decimal(0);
+  let usd = new Prisma.Decimal(0);
+  for (const r of rows) {
+    const amt = new Prisma.Decimal(r.amount);
+    const sign = r.flow === "ingreso" ? 1 : r.flow === "egreso" ? -1 : 0;
+    if (sign === 0) continue;
+    const delta = amt.mul(sign);
+    if (r.currencyCode === "ARS") ars = ars.add(delta);
+    if (r.currencyCode === "USD") usd = usd.add(delta);
+  }
+  return { ARS: ars.toString(), USD: usd.toString() };
+}
+
+async function gatherTransactionRows(
+  organizationId: string,
+  q: Pick<TransactionFeedQuery, "vista" | "moneda" | "ubicacion" | "flujo">,
+  gte: Date,
+  lt: Date,
+  vis: TransactionVisibility,
+): Promise<TransactionFeedRow[]> {
   const bankRows = await prisma.bankAccount.findMany({
     where: { organizationId },
     select: { id: true, name: true, treasuryLocationId: true, treasuryLocation: { select: { displayName: true } } },
@@ -110,7 +143,6 @@ export async function listTransactionFeed(
           const bid = bankIdByTreasuryId.get(ubic);
           return bid ? [bid] : [];
         })();
-  /** Ubicación no bancaria: no hay depósitos ni transferencias bancarias para esa caja/MP. */
   const skipBankSourceQueries = ubic != null && bankIdsForUbic !== null && bankIdsForUbic.length === 0;
 
   const rows: TransactionFeedRow[] = [];
@@ -125,11 +157,13 @@ export async function listTransactionFeed(
     });
   };
 
+  const del = deletedAtFilter(vis);
+
   if (q.vista === "efectivo") {
     const depWhere: Prisma.BankDepositWhereInput = {
       organizationId,
-      deletedAt: null,
       depositDate: { gte, lt },
+      ...del,
     };
     if (bankIdsForUbic) {
       depWhere.bankAccountId = { in: bankIdsForUbic };
@@ -147,7 +181,7 @@ export async function listTransactionFeed(
             bankAccount: { select: { treasuryLocationId: true, name: true } },
           },
           orderBy: { depositDate: "desc" },
-          take: 2000,
+          take: 5000,
         });
     for (const d of deposits) {
       const tl = d.bankAccount.treasuryLocationId;
@@ -169,8 +203,8 @@ export async function listTransactionFeed(
 
     const xferWhere: Prisma.BankTransferWhereInput = {
       organizationId,
-      deletedAt: null,
       transferDate: { gte, lt },
+      ...del,
     };
     if (bankIdsForUbic) {
       const bid = bankIdsForUbic[0];
@@ -191,7 +225,7 @@ export async function listTransactionFeed(
             toAccount: { select: { id: true, name: true, treasuryLocationId: true } },
           },
           orderBy: { transferDate: "desc" },
-          take: 2000,
+          take: 5000,
         });
     for (const t of xfers) {
       const fee = t.feeAmount ?? new Prisma.Decimal(0);
@@ -226,13 +260,14 @@ export async function listTransactionFeed(
       });
     }
 
+    const manualWhere: Prisma.TreasuryManualMovementWhereInput = {
+      organizationId,
+      movementDate: { gte, lt },
+      ...(ubic ? { treasuryLocationId: ubic } : {}),
+      ...del,
+    };
     const manuals = await prisma.treasuryManualMovement.findMany({
-      where: {
-        organizationId,
-        deletedAt: null,
-        movementDate: { gte, lt },
-        ...(ubic ? { treasuryLocationId: ubic } : {}),
-      },
+      where: manualWhere,
       select: {
         id: true,
         movementDate: true,
@@ -243,7 +278,7 @@ export async function listTransactionFeed(
         treasuryLocationId: true,
       },
       orderBy: { movementDate: "desc" },
-      take: 500,
+      take: 5000,
     });
     for (const m of manuals) {
       push({
@@ -258,18 +293,29 @@ export async function listTransactionFeed(
         currencyCode: m.currencyCode,
         treasuryLocationId: m.treasuryLocationId,
         treasuryLocationLabel: treasuryLabel.get(m.treasuryLocationId) ?? null,
-        href: "/tesoreria/transacciones",
+        href: `/tesoreria/movimientos/${m.id}`,
       });
     }
   } else {
+    const collectionWhere: Prisma.CollectionWhereInput = {
+      organizationId,
+      collectionDate: { gte, lt },
+    };
+    if (vis === "activas") {
+      collectionWhere.deletedAt = null;
+      collectionWhere.voidedAt = null;
+      collectionWhere.status = "valid";
+    } else if (vis === "archivadas") {
+      collectionWhere.OR = [
+        { deletedAt: { not: null } },
+        { voidedAt: { not: null } },
+        { status: "voided" },
+      ];
+    } else {
+      collectionWhere.status = { in: ["valid", "voided"] };
+    }
     const cols = await prisma.collection.findMany({
-      where: {
-        organizationId,
-        deletedAt: null,
-        voidedAt: null,
-        status: "valid",
-        collectionDate: { gte, lt },
-      },
+      where: collectionWhere,
       select: {
         id: true,
         collectionDate: true,
@@ -279,7 +325,7 @@ export async function listTransactionFeed(
         notes: true,
       },
       orderBy: { collectionDate: "desc" },
-      take: 2000,
+      take: 5000,
     });
     for (const c of cols) {
       push({
@@ -298,17 +344,14 @@ export async function listTransactionFeed(
       });
     }
 
+    const feeWhereCollection: Prisma.CollectionWhereInput = { ...collectionWhere };
+    const feeDel =
+      vis === "activas" ? { deletedAt: null } : vis === "archivadas" ? { deletedAt: { not: null } } : {};
     const fees = await prisma.collectionFee.findMany({
       where: {
         organizationId,
-        deletedAt: null,
-        collection: {
-          organizationId,
-          deletedAt: null,
-          voidedAt: null,
-          status: "valid",
-          collectionDate: { gte, lt },
-        },
+        ...feeDel,
+        collection: feeWhereCollection,
       },
       select: {
         id: true,
@@ -319,7 +362,7 @@ export async function listTransactionFeed(
         collection: { select: { id: true, collectionDate: true, currencyCode: true } },
       },
       orderBy: { id: "desc" },
-      take: 2000,
+      take: 5000,
     });
     for (const f of fees) {
       const colCcy = f.collection.currencyCode;
@@ -344,9 +387,59 @@ export async function listTransactionFeed(
     }
   }
 
-  rows.sort((a, b) => (a.sortAt < b.sortAt ? 1 : a.sortAt > b.sortAt ? -1 : 0));
+  return rows;
+}
+
+export async function listTransactionRowsForReport(
+  organizationId: string,
+  input: TreasuryTransactionReportInput,
+): Promise<{ ok: true; rows: TransactionFeedRow[] } | { ok: false; error: string }> {
+  const dr = dateRangeFromQuery({ desde: input.desde, hasta: input.hasta });
+  if (!dr.ok) return dr;
+  const { gte, lt } = dr;
+  const rows = await gatherTransactionRows(
+    organizationId,
+    {
+      vista: input.vista,
+      moneda: input.moneda,
+      ubicacion: input.ubicacion,
+      flujo: input.flujo,
+    },
+    gte,
+    lt,
+    input.visibilidad,
+  );
+  sortRows(rows, input.orden);
+  return { ok: true, rows };
+}
+
+export async function listTransactionFeed(
+  organizationId: string,
+  q: TransactionFeedQuery,
+): Promise<
+  | {
+      ok: true;
+      rows: TransactionFeedRow[];
+      total: number;
+      page: number;
+      pageSize: number;
+      range: { desde: string; hasta: string };
+      totalsByCurrency: { ARS: string; USD: string };
+    }
+  | { ok: false; error: string }
+> {
+  const dr = dateRangeFromQuery(q);
+  if (!dr.ok) {
+    return { ok: false, error: dr.error };
+  }
+  const { gte, lt } = dr;
+  const range = { desde: ymdUtc(gte), hasta: ymdUtc(new Date(lt.getTime() - 86400000)) };
+
+  const rows = await gatherTransactionRows(organizationId, q, gte, lt, "activas");
+  sortRows(rows, q.orden);
+  const totalsByCurrency = netTotalsByCurrency(rows);
   const total = rows.length;
   const start = (q.page - 1) * q.pageSize;
   const slice = rows.slice(start, start + q.pageSize);
-  return { ok: true, rows: slice, total, page: q.page, pageSize: q.pageSize, range };
+  return { ok: true, rows: slice, total, page: q.page, pageSize: q.pageSize, range, totalsByCurrency };
 }

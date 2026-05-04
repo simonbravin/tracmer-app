@@ -6,6 +6,7 @@ import {
   cobranzasReportFilterSchema,
   conciliacionesReportFilterSchema,
   depositosReportFilterSchema,
+  transaccionesTesoreriaReportFilterSchema,
   ventasReportFilterSchema,
 } from "@/lib/reports/validation";
 
@@ -52,6 +53,11 @@ export const storedReportParametersSchema = z.discriminatedUnion("report", [
     report: z.literal("depositos"),
     format: z.enum(["xlsx", "pdf"]),
     filter: depositosReportFilterSchema,
+  }),
+  z.object({
+    report: z.literal("transacciones_tesoreria"),
+    format: z.enum(["xlsx", "pdf"]),
+    filter: transaccionesTesoreriaReportFilterSchema,
   }),
   z.object({
     report: z.literal("conciliaciones"),

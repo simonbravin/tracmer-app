@@ -3,7 +3,6 @@ import Link from "next/link";
 import { Plus } from "lucide-react";
 
 import { NoOrganizationMessage } from "@/components/clients/no-organization-message";
-import { PageHeader } from "@/components/common/page-header";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { DataTableSurface } from "@/components/ui/data-table-surface";
@@ -41,33 +40,37 @@ export default async function UbicacionesPage() {
   const ctx = await getAppRequestContext();
   if (!ctx?.currentOrganizationId || !ctx.primaryMembership) {
     return (
-      <div className="max-w-6xl space-y-4">
-        <PageHeader title="Ubicaciones de fondos" description="Dónde está el dinero de la empresa." />
+      <div className="space-y-4">
+        <h1 className="text-2xl font-semibold tracking-tight">Ubicaciones de fondos</h1>
+        <p className="text-muted-foreground text-sm">Dónde está el dinero de la empresa.</p>
         <NoOrganizationMessage />
       </div>
     );
   }
   const orgId = ctx.currentOrganizationId;
   const role = ctx.primaryMembership.role;
-  const canView = await hasPermission(orgId, role.id, role.code, P.treasury.view);
+  const canView = await hasPermission(orgId, role.id, role.code, P.treasury_locations.view);
   if (!canView) {
     return (
-      <div className="max-w-6xl space-y-4">
-        <PageHeader title="Ubicaciones de fondos" description="Dónde está el dinero de la empresa." />
-        <p className="text-muted-foreground text-sm">No tenés permiso para ver tesorería.</p>
+      <div className="space-y-4">
+        <h1 className="text-2xl font-semibold tracking-tight">Ubicaciones de fondos</h1>
+        <p className="text-muted-foreground text-sm">No tenés permiso para ver ubicaciones de tesorería.</p>
       </div>
     );
   }
   const [locs, bals] = await Promise.all([listTreasuryLocationsForOrg(orgId), treasuryBalancesByLocationId(orgId)]);
-  const canCreate = await hasPermission(orgId, role.id, role.code, P.treasury.create);
+  const canCreate = await hasPermission(orgId, role.id, role.code, P.treasury_locations.create);
 
   return (
-    <div className="max-w-6xl space-y-6">
+    <div className="space-y-6">
       <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
-        <PageHeader
-          title="Ubicaciones de fondos"
-          description="Cada cuenta bancaria tiene una ubicación tipo Banco. Podés sumar caja chica o Mercado Pago como ubicaciones propias."
-        />
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight">Ubicaciones de fondos</h1>
+          <p className="text-muted-foreground text-sm">
+            Cada cuenta bancaria tiene una ubicación tipo Banco. Podés sumar caja chica o Mercado Pago como ubicaciones
+            propias.
+          </p>
+        </div>
         {canCreate ? (
           <Button asChild>
             <Link href="/tesoreria/ubicaciones/nueva" className="inline-flex">
