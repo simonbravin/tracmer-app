@@ -6,6 +6,8 @@
     "dev": "pnpm --filter @tracmer-app/web dev",
     "build": "pnpm --filter @tracmer-app/web build",
     "lint": "pnpm --filter @tracmer-app/web lint",
+    "typecheck": "pnpm -r run typecheck",
+    "check": "pnpm run db:validate && pnpm run typecheck && pnpm run lint",
     "db:generate": "pnpm --filter @tracmer-app/database prisma:generate",
     "db:validate": "pnpm --filter @tracmer-app/database prisma:validate",
     "db:migrate:deploy": "dotenv -e .env -- pnpm --filter @tracmer-app/database exec prisma migrate deploy"

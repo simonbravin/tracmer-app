@@ -13,6 +13,7 @@
   },
   "scripts": {
     "postinstall": "prisma generate",
+    "typecheck": "tsc --noEmit",
     "prisma:generate": "prisma generate",
     "prisma:validate": "prisma validate",
     "prisma:migrate:dev": "prisma migrate dev",

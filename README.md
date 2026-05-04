@@ -40,6 +40,8 @@ pnpm dev
 |---------|-------------|
 | `pnpm dev` | App web en desarrollo |
 | `pnpm build` | Build producción de la web |
+| `pnpm typecheck` | `tsc --noEmit` en todos los paquetes workspace que lo definen |
+| `pnpm check` | Validación Prisma + typecheck + lint (misma secuencia que CI) |
 | `pnpm lint` | ESLint de la web |
 | `pnpm db:generate` | Cliente Prisma |
 | `pnpm db:validate` | Validar `schema.prisma` |
