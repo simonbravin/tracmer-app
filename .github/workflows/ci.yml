@@ -12,6 +12,9 @@ concurrency:
 jobs:
   check:
     runs-on: ubuntu-latest
+    env:
+      # prisma validate / generate leen env("DATABASE_URL"); no hace falta un Postgres real en CI.
+      DATABASE_URL: "postgresql://ci:ci@127.0.0.1:5432/ci?schema=public"
     steps:
       - uses: actions/checkout@v4
 
