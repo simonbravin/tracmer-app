@@ -14,8 +14,6 @@ import {
   treasuryOperativoPeriodTotals,
 } from "@/lib/treasury/balances";
 
-import type { DashboardQuery } from "./validation";
-
 const TOL = new Prisma.Decimal("0.01");
 
 const STATUS_FACTURADO: SaleStatus[] = [
@@ -48,28 +46,7 @@ function ymdToRange(ymdFrom: string, ymdTo: string) {
 type DashboardFilters = {
   orgId: string;
   range: { desde: string; hasta: string };
-  query: DashboardQuery;
 };
-
-function saleQWhere(
-  q: string | undefined,
-): Prisma.SaleWhereInput | null {
-  const t = q?.trim();
-  if (!t) return null;
-  return {
-    OR: [
-      { invoiceNumber: { contains: t, mode: "insensitive" } },
-      {
-        client: {
-          OR: [
-            { displayName: { contains: t, mode: "insensitive" } },
-            { legalName: { contains: t, mode: "insensitive" } },
-          ],
-        },
-      },
-    ],
-  };
-}
 
 export type MoneyBuckets = { ARS: Prisma.Decimal; USD: Prisma.Decimal };
 
@@ -125,8 +102,6 @@ export type ClientRankRow = {
 
 /**
  * Carga de tablero: rango = facturas / cobranzas / depósitos (fecha documento), multi-tenant.
- * Filtro cliente: facturación y CxC (venta); cobranza agregada y bancos siguen siendo a nivel organización
- * (neto y depósito no se desglosan por cliente sin criterio contable adicional).
  */
 export async function getDashboardData(f: DashboardFilters): Promise<{
   kpis: DashboardKpis;
@@ -137,20 +112,17 @@ export async function getDashboardData(f: DashboardFilters): Promise<{
   topFacturacion: ClientRankRow[];
   topPendiente: ClientRankRow[];
 }> {
-  const { orgId, range, query: dq } = f;
+  const { orgId, range } = f;
   const inv = ymdToRange(range.desde, range.hasta);
   const colDt = ymdToRange(range.desde, range.hasta);
   const depDt = ymdToRange(range.desde, range.hasta);
   const closedRecon = ymdToRange(range.desde, range.hasta);
-
-  const whereClient = dq.cliente ? { clientId: dq.cliente } : ({} as object);
 
   const whereSaleKpi: Prisma.SaleWhereInput = {
     organizationId: orgId,
     deletedAt: null,
     status: { in: STATUS_FACTURADO },
     invoiceDate: inv,
-    ...whereClient,
   };
 
   const [facturadoG, colRows, depG, recMap, draftMap] = await Promise.all([
@@ -240,7 +212,6 @@ export async function getDashboardData(f: DashboardFilters): Promise<{
     deletedAt: null,
     status: { in: [SaleStatus.issued, SaleStatus.partially_collected, SaleStatus.overdue] },
     invoiceDate: inv,
-    ...whereClient,
   };
   const openSales = await prisma.sale.findMany({
     where: wherePendingSale,
@@ -271,16 +242,13 @@ export async function getDashboardData(f: DashboardFilters): Promise<{
     pendCob[b] = pendCob[b].add(rem);
   }
 
-  const vencQ = saleQWhere(dq.q);
   const vencBase: Prisma.SaleWhereInput = {
     organizationId: orgId,
     deletedAt: null,
     status: { in: [SaleStatus.issued, SaleStatus.partially_collected, SaleStatus.overdue] },
-    ...whereClient,
   };
-  const vencQuery: Prisma.SaleWhereInput = vencQ ? { AND: [vencBase, vencQ] } : vencBase;
   const forVenc = await prisma.sale.findMany({
-    where: vencQuery,
+    where: vencBase,
     take: 400,
     orderBy: { invoiceDate: "asc" },
     select: {
@@ -358,10 +326,6 @@ export async function getDashboardData(f: DashboardFilters): Promise<{
     const dr = draftMap.get(c.id) ?? d0();
     const p = pendingCollection(c.grossAmount, re).sub(dr);
     if (p.lte(TOL)) continue;
-    if (dq.q) {
-      const t = dq.q.trim();
-      if (!c.id.toLowerCase().includes(t.toLowerCase())) continue;
-    }
     cobNoDepRows.push({
       id: c.id,
       collectionDate: c.collectionDate.toISOString().slice(0, 10),

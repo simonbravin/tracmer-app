@@ -27,14 +27,6 @@ export const dashboardQuerySchema = z
       (v) => (typeof v === "string" && v === "" ? undefined : v),
       ymd.optional(),
     ),
-    cliente: z
-      .string()
-      .optional()
-      .transform((s) => (s == null || s === "" ? undefined : s)),
-    q: z
-      .string()
-      .optional()
-      .transform((s) => (s == null ? undefined : s.trim() || undefined)),
   })
   .superRefine((data, ctx) => {
     if (data.periodo !== "custom") return;
@@ -96,15 +88,11 @@ export function parseDashboardSearchParams(
     periodo: p("periodo"),
     desde: p("desde"),
     hasta: p("hasta"),
-    cliente: p("cliente"),
-    q: p("q"),
   };
   const parsed = dashboardQuerySchema.safeParse({
     periodo: pre.periodo && periodoValues.includes(pre.periodo as PeriodoPreset) ? pre.periodo : undefined,
     desde: pre.desde,
     hasta: pre.hasta,
-    cliente: pre.cliente,
-    q: pre.q,
   });
   if (!parsed.success) {
     const r = resolveDateRange("mes", undefined, undefined);
@@ -112,8 +100,6 @@ export function parseDashboardSearchParams(
       periodo: "mes",
       desde: undefined,
       hasta: undefined,
-      cliente: undefined,
-      q: undefined,
     };
     return { ok: false, data, range: r, zodError: parsed.error };
   }

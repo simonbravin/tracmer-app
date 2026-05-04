@@ -6,22 +6,16 @@ import { useCallback, useEffect, useState, useTransition } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { SegmentToggleButtons } from "@/components/ui/segment-toggle-buttons";
 import { cn } from "@/lib/utils";
 
 import { DASHBOARD_TOTAL_DESDE, type PeriodoPreset } from "@/lib/dashboard/validation";
-
-type ClientOption = { id: string; displayName: string; legalName: string };
 
 export function DashboardFilters({
   defaultPeriodo,
   defaultDesde,
   defaultHasta,
-  defaultCliente,
-  defaultQ,
   rangeDesde,
   rangeHasta,
-  clients,
   className,
 }: {
   defaultPeriodo: PeriodoPreset;
@@ -29,9 +23,6 @@ export function DashboardFilters({
   defaultHasta: string;
   rangeDesde: string;
   rangeHasta: string;
-  defaultCliente: string;
-  defaultQ: string;
-  clients: ClientOption[];
   className?: string;
 }) {
   const router = useRouter();
@@ -58,129 +49,114 @@ export function DashboardFilters({
     [router],
   );
 
+  const applyPeriodo = useCallback(
+    (k: PeriodoPreset) => {
+      setPeriodo(k);
+      const sp = new URLSearchParams();
+      if (k !== "mes") sp.set("periodo", k);
+      if (k === "custom") {
+        if (rangeDesde === DASHBOARD_TOTAL_DESDE) {
+          const hoy = rangeHasta;
+          sp.set("desde", hoy);
+          sp.set("hasta", hoy);
+        } else {
+          sp.set("desde", defaultDesde || rangeDesde);
+          sp.set("hasta", defaultHasta || rangeHasta);
+        }
+      }
+      pushParams(sp);
+    },
+    [
+      defaultDesde,
+      defaultHasta,
+      pushParams,
+      rangeDesde,
+      rangeHasta,
+    ],
+  );
+
   return (
     <div className={cn("space-y-3", className)}>
+      <p className="text-muted-foreground text-xs">
+        Rango aplicado:{" "}
+        <span className="tabular-nums text-foreground">{rangeDesde}</span>
+        <span className="sr-only"> hasta </span>
+        <span aria-hidden className="tabular-nums text-foreground">
+          {" "}
+          →{" "}
+        </span>
+        <span className="tabular-nums text-foreground">{rangeHasta}</span>
+        . La leyenda bajo los KPIs indica qué fecha usa cada módulo.
+      </p>
       <form
-        className="space-y-4"
+        className="grid gap-3"
         onSubmit={(e) => {
           e.preventDefault();
+          if (periodo !== "custom") return;
           const fd = new FormData(e.currentTarget);
           const desde = String(fd.get("desde") ?? "");
           const hasta = String(fd.get("hasta") ?? "");
-          const cliente = String(fd.get("cliente") ?? "");
-          const q = String(fd.get("q") ?? "");
           const sp = new URLSearchParams();
-          if (periodo && periodo !== "mes") sp.set("periodo", periodo);
-          if (periodo === "custom" && desde && hasta) {
+          sp.set("periodo", "custom");
+          if (desde && hasta) {
             sp.set("desde", desde);
             sp.set("hasta", hasta);
           }
-          if (cliente) sp.set("cliente", cliente);
-          if (q.trim()) sp.set("q", q.trim());
           pushParams(sp);
         }}
       >
-        <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between sm:gap-x-4">
-          <div className="min-w-0 flex-1">
-            <SegmentToggleButtons<PeriodoPreset>
-              aria-label="Período del tablero"
-              items={[
-                { value: "mes", label: "Este mes" },
-                { value: "anio", label: "Este año" },
-                { value: "custom", label: "Personalizado" },
-                { value: "total", label: "Total" },
-              ]}
-              value={periodo}
-              onValueChange={(k) => {
-                setPeriodo(k);
-                const sp = new URLSearchParams();
-                if (k !== "mes") sp.set("periodo", k);
-                if (k === "custom") {
-                  if (rangeDesde === DASHBOARD_TOTAL_DESDE) {
-                    const hoy = rangeHasta;
-                    sp.set("desde", hoy);
-                    sp.set("hasta", hoy);
-                  } else {
-                    sp.set("desde", defaultDesde || rangeDesde);
-                    sp.set("hasta", defaultHasta || rangeHasta);
-                  }
-                }
-                if (defaultCliente) sp.set("cliente", defaultCliente);
-                if (defaultQ) sp.set("q", defaultQ);
-                pushParams(sp);
-              }}
-            />
-          </div>
-          <p className="text-muted-foreground shrink-0 text-sm sm:text-right">
-            <span className="font-medium text-foreground">Rango:</span>{" "}
-            <span className="tabular-nums">{rangeDesde}</span>
-            <span className="sr-only"> hasta </span>
-            <span aria-hidden className="tabular-nums">
-              {" "}
-              →{" "}
-            </span>
-            <span className="tabular-nums">{rangeHasta}</span>
-          </p>
-        </div>
-
-        {periodo === "custom" && (
-          <div className="grid max-w-md gap-3 sm:grid-cols-2">
-            <div className="grid gap-1.5">
-              <Label htmlFor="desde" className="text-xs">Desde</Label>
-              <Input
-                id="desde"
-                name="desde"
-                type="date"
-                defaultValue={customDesdeValue}
-                required={periodo === "custom"}
-              />
-            </div>
-            <div className="grid gap-1.5">
-              <Label htmlFor="hasta" className="text-xs">Hasta</Label>
-              <Input
-                id="hasta"
-                name="hasta"
-                type="date"
-                defaultValue={customHastaValue}
-                required={periodo === "custom"}
-              />
-            </div>
-          </div>
-        )}
-
-        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+        <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
           <div className="grid gap-1.5">
-            <Label htmlFor="cliente" className="text-xs">Cliente (facturación y CxC)</Label>
+            <Label htmlFor="tablero-periodo" className="text-xs">
+              Período
+            </Label>
             <select
-              id="cliente"
-              name="cliente"
-              defaultValue={defaultCliente}
-              className="border-input bg-background ring-offset-background h-9 rounded-md border px-2 text-sm shadow-sm"
+              id="tablero-periodo"
+              value={periodo}
+              onChange={(e) => {
+                applyPeriodo(e.target.value as PeriodoPreset);
+              }}
+              className="border-input bg-background ring-offset-background h-9 min-w-[12rem] rounded-md border px-2 text-sm shadow-sm"
             >
-              <option value="">
-                (todos — facturado/pend. cobro; cobranza y bancos siguen a nivel org.)
-              </option>
-              {clients.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.displayName || c.legalName}
-                </option>
-              ))}
+              <option value="mes">Este mes</option>
+              <option value="anio">Este año</option>
+              <option value="custom">Personalizado</option>
+              <option value="total">Total histórico</option>
             </select>
           </div>
-          <div className="grid gap-1.5">
-            <Label htmlFor="q" className="text-xs">Búsqueda (ventas vencidas, id cobranza no dep.)</Label>
-            <Input id="q" name="q" defaultValue={defaultQ} placeholder="Factura, cliente, id cobranza…" autoComplete="off" />
-          </div>
-        </div>
-
-        <div className="flex flex-wrap gap-2">
-          <Button type="submit" disabled={pending}>
-            Aplicar
-          </Button>
-          <p className="text-muted-foreground w-full text-xs sm:w-auto">
-            Los accesos rápidos arriba ajustan el rango. &quot;Aplicar&quot; envía el período actual, cliente
-            y búsqueda.
-          </p>
+          {periodo === "custom" && (
+            <>
+              <div className="grid gap-1.5">
+                <Label htmlFor="tablero-desde" className="text-xs">
+                  Desde
+                </Label>
+                <Input
+                  id="tablero-desde"
+                  name="desde"
+                  type="date"
+                  defaultValue={customDesdeValue}
+                  required
+                />
+              </div>
+              <div className="grid gap-1.5">
+                <Label htmlFor="tablero-hasta" className="text-xs">
+                  Hasta
+                </Label>
+                <Input
+                  id="tablero-hasta"
+                  name="hasta"
+                  type="date"
+                  defaultValue={customHastaValue}
+                  required
+                />
+              </div>
+              <div className="flex items-end sm:col-span-2 lg:col-span-1">
+                <Button type="submit" disabled={pending} className="w-full sm:w-auto">
+                  {pending ? "…" : "Aplicar fechas"}
+                </Button>
+              </div>
+            </>
+          )}
         </div>
       </form>
     </div>

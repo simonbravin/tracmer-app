@@ -33,32 +33,17 @@ function rowTotal(v: unknown): number {
 
 /**
  * Serie diaria en ARS (facturado / cobrado bruto / depositado) para gráficos.
- * Cobranza y depósito a nivel organización; facturado respeta `clientId` si se pasa.
+ * Todo a nivel organización según el rango de fechas del tablero.
  */
 export async function getDashboardDailySeriesArs(input: {
   orgId: string;
   range: { desde: string; hasta: string };
-  clientId?: string | null;
 }): Promise<DashboardDailyPoint[]> {
-  const { orgId, range, clientId } = input;
+  const { orgId, range } = input;
   const days = eachIsoDayInclusive(range.desde, range.hasta);
   if (days.length === 0) return [];
 
-  const saleRows = clientId
-    ? await prisma.$queryRaw<{ day: string; total: unknown }[]>(Prisma.sql`
-        SELECT s.invoice_date::text AS day, COALESCE(SUM(s.total_amount), 0) AS total
-        FROM sales s
-        WHERE s.organization_id = ${orgId}
-          AND s.deleted_at IS NULL
-          AND s.status IN ('issued', 'partially_collected', 'collected', 'overdue')
-          AND s.currency_code = 'ARS'
-          AND s.invoice_date >= ${range.desde}::date
-          AND s.invoice_date <= ${range.hasta}::date
-          AND s.client_id = ${clientId}
-        GROUP BY s.invoice_date
-        ORDER BY s.invoice_date
-      `)
-    : await prisma.$queryRaw<{ day: string; total: unknown }[]>(Prisma.sql`
+  const saleRows = await prisma.$queryRaw<{ day: string; total: unknown }[]>(Prisma.sql`
         SELECT s.invoice_date::text AS day, COALESCE(SUM(s.total_amount), 0) AS total
         FROM sales s
         WHERE s.organization_id = ${orgId}

@@ -22,7 +22,6 @@ import { getDashboardData } from "@/lib/dashboard/data";
 import { getDashboardDailySeriesArs } from "@/lib/dashboard/series";
 import { parseDashboardSearchParams, resolveDateRange } from "@/lib/dashboard/validation";
 import { getAppRequestContext } from "@/lib/auth/app-context";
-import { listActiveClients } from "@/lib/sales/data";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 
@@ -51,15 +50,10 @@ export default async function TableroPage({ searchParams }: PageProps) {
   const d = parsed.data;
   const range = parsed.range;
   const rResolved = resolveDateRange(d.periodo, d.desde, d.hasta);
-  const [data, clients, alertSummary, dailySeries] = await Promise.all([
-    getDashboardData({ orgId, range, query: d }),
-    listActiveClients(orgId),
+  const [data, alertSummary, dailySeries] = await Promise.all([
+    getDashboardData({ orgId, range }),
     countOpenActiveHighSeverity(orgId),
-    getDashboardDailySeriesArs({
-      orgId,
-      range,
-      clientId: d.cliente?.trim() ? d.cliente : null,
-    }),
+    getDashboardDailySeriesArs({ orgId, range }),
   ]);
   const topFactArs = data.topFacturacion.filter((r) => r.currencyCode === "ARS");
   const topFactUsd = data.topFacturacion.filter((r) => r.currencyCode === "USD");
@@ -76,7 +70,7 @@ export default async function TableroPage({ searchParams }: PageProps) {
         <div>
           <PageHeader
             title="Tablero"
-            description="Resumen por período, moneda, y criterio documental (misma lógica que los módulos vinculados)."
+            description="Resumen por rango de fechas y moneda (misma lógica documental que los módulos vinculados)."
             actions={<DashboardAlertsHeaderAction />}
           />
           <div className="mt-2">
@@ -90,28 +84,14 @@ export default async function TableroPage({ searchParams }: PageProps) {
         </div>
       </DashboardAlertsProvider>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg">Filtros</CardTitle>
-          <CardDescription>
-            Período (mes, año, personalizado o total histórico), cliente y búsqueda. Leyenda de fechas por módulo debajo de
-            los KPIs.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <DashboardFilters
-            key={`${d.periodo}-${range.desde}-${range.hasta}-${d.cliente ?? ""}`}
-            defaultPeriodo={d.periodo}
-            defaultDesde={d.desde ?? rResolved.desde}
-            defaultHasta={d.hasta ?? rResolved.hasta}
-            defaultCliente={d.cliente ?? ""}
-            defaultQ={d.q ?? ""}
-            rangeDesde={range.desde}
-            rangeHasta={range.hasta}
-            clients={clients}
-          />
-        </CardContent>
-      </Card>
+      <DashboardFilters
+        key={`${d.periodo}-${range.desde}-${range.hasta}`}
+        defaultPeriodo={d.periodo}
+        defaultDesde={d.desde ?? rResolved.desde}
+        defaultHasta={d.hasta ?? rResolved.hasta}
+        rangeDesde={range.desde}
+        rangeHasta={range.hasta}
+      />
 
       <div className="space-y-2">
         <h2 className="text-sm font-medium uppercase text-muted-foreground">Indicadores</h2>
