@@ -25,6 +25,11 @@ export const P = {
     create: "banks.create",
     edit: "banks.edit",
   },
+  treasury: {
+    view: "treasury.view",
+    create: "treasury.create",
+    edit: "treasury.edit",
+  },
   reconciliations: {
     view: "reconciliations.view",
     create: "reconciliations.create",

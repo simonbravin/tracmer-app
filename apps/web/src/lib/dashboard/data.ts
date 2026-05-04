@@ -8,6 +8,11 @@ import { mapReconciledByCollection, pendingCollection } from "@/lib/reconciliati
 import { mapDraftByCollection } from "@/lib/reconciliations/data";
 import { parseInvoiceDateInput } from "@/lib/sales/data";
 import { addCreditDays, isPastDue } from "@/lib/sales/format";
+import {
+  listTreasuryLocationBalancesForDashboard,
+  treasuryEfectivoPeriodTotals,
+  treasuryOperativoPeriodTotals,
+} from "@/lib/treasury/balances";
 
 import type { DashboardQuery } from "./validation";
 
@@ -77,6 +82,12 @@ export type DashboardKpis = {
   pendienteDepositar: MoneyBuckets;
 };
 
+export type TreasuryDashboardBlock = {
+  saldos: Awaited<ReturnType<typeof listTreasuryLocationBalancesForDashboard>>;
+  efectivoPeriodo: Awaited<ReturnType<typeof treasuryEfectivoPeriodTotals>>;
+  operativoPeriodo: Awaited<ReturnType<typeof treasuryOperativoPeriodTotals>>;
+};
+
 export type VencidaRow = {
   id: string;
   invoiceNumber: string | null;
@@ -119,6 +130,7 @@ export type ClientRankRow = {
  */
 export async function getDashboardData(f: DashboardFilters): Promise<{
   kpis: DashboardKpis;
+  treasury: TreasuryDashboardBlock;
   ventasVencidas: VencidaRow[];
   cobranzasNoDep: ColNoDepRow[];
   concRecientes: ReconRow[];
@@ -468,6 +480,13 @@ export async function getDashboardData(f: DashboardFilters): Promise<{
     currencyCode: p.ccy,
   }));
 
+  const treasuryPeriod = { gte: colDt.gte as Date, lt: colDt.lt as Date };
+  const [treasurySaldos, treasuryEfectivoPeriodo, treasuryOperativoPeriodo] = await Promise.all([
+    listTreasuryLocationBalancesForDashboard(orgId),
+    treasuryEfectivoPeriodTotals(orgId, treasuryPeriod),
+    treasuryOperativoPeriodTotals(orgId, treasuryPeriod),
+  ]);
+
   return {
     kpis: {
       facturado: { ARS: facturado.ARS, USD: facturado.USD },
@@ -476,6 +495,11 @@ export async function getDashboardData(f: DashboardFilters): Promise<{
       depositado: { ARS: depositado.ARS, USD: depositado.USD },
       pendienteCobrar: { ARS: pendCob.ARS, USD: pendCob.USD },
       pendienteDepositar: { ARS: pendDep.ARS, USD: pendDep.USD },
+    },
+    treasury: {
+      saldos: treasurySaldos,
+      efectivoPeriodo: treasuryEfectivoPeriodo,
+      operativoPeriodo: treasuryOperativoPeriodo,
     },
     ventasVencidas,
     cobranzasNoDep,

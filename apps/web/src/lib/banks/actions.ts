@@ -22,6 +22,9 @@ import {
 const CUENTAS = "/bancos/cuentas";
 const DEPO = "/bancos/depositos";
 const TRANS = "/bancos/transferencias";
+const TABLERO = "/tablero";
+const TESORERIA_TX = "/tesoreria/transacciones";
+const TESORERIA_UBI = "/tesoreria/ubicaciones";
 
 export type ActionState =
   | { success: true; message?: string }
@@ -87,21 +90,37 @@ export async function createBankAccount(
   const d = p.data;
   let acc: { id: string };
   try {
-    acc = await prisma.bankAccount.create({
-      data: {
-        organizationId: org.ctx.organizationId,
-        name: d.name,
-        bankName: d.bankName,
-        currencyCode: d.currencyCode as CurrencyCode,
-        accountIdentifierMasked: d.accountIdentifierMasked,
-        isActive: d.isActive,
-      },
-      select: { id: true },
+    acc = await prisma.$transaction(async (tx) => {
+      const loc = await tx.treasuryLocation.create({
+        data: {
+          organizationId: org.ctx.organizationId,
+          kind: "bank",
+          displayName: d.name,
+          currencyCode: d.currencyCode as CurrencyCode,
+          isActive: d.isActive,
+        },
+        select: { id: true },
+      });
+      return tx.bankAccount.create({
+        data: {
+          organizationId: org.ctx.organizationId,
+          treasuryLocationId: loc.id,
+          name: d.name,
+          bankName: d.bankName,
+          currencyCode: d.currencyCode as CurrencyCode,
+          accountIdentifierMasked: d.accountIdentifierMasked,
+          isActive: d.isActive,
+        },
+        select: { id: true },
+      });
     });
   } catch (e) {
     return { success: false, error: mapPrismaToMessage(e) };
   }
   revalidatePath(CUENTAS);
+  revalidatePath(TABLERO);
+  revalidatePath(TESORERIA_TX);
+  revalidatePath(TESORERIA_UBI);
   redirect(`${CUENTAS}/${acc.id}`);
 }
 
@@ -120,6 +139,7 @@ export async function updateBankAccount(
   }
   const ex = await prisma.bankAccount.findFirst({
     where: { id, organizationId: org.ctx.organizationId, deletedAt: null },
+    select: { id: true, treasuryLocationId: true },
   });
   if (!ex) {
     return { success: false, error: "La cuenta no existe o está archivada." };
@@ -136,22 +156,35 @@ export async function updateBankAccount(
   }
   const d = p.data;
   try {
-    await prisma.bankAccount.update({
-      where: { id: ex.id },
-      data: {
-        name: d.name,
-        bankName: d.bankName,
-        currencyCode: d.currencyCode as CurrencyCode,
-        accountIdentifierMasked: d.accountIdentifierMasked,
-        isActive: d.isActive,
-      },
-    });
+    await prisma.$transaction([
+      prisma.bankAccount.update({
+        where: { id: ex.id },
+        data: {
+          name: d.name,
+          bankName: d.bankName,
+          currencyCode: d.currencyCode as CurrencyCode,
+          accountIdentifierMasked: d.accountIdentifierMasked,
+          isActive: d.isActive,
+        },
+      }),
+      prisma.treasuryLocation.update({
+        where: { id: ex.treasuryLocationId },
+        data: {
+          displayName: d.name,
+          currencyCode: d.currencyCode as CurrencyCode,
+          isActive: d.isActive,
+        },
+      }),
+    ]);
   } catch (e) {
     return { success: false, error: mapPrismaToMessage(e) };
   }
   revalidatePath(CUENTAS);
   revalidatePath(`${CUENTAS}/${id}`);
   revalidatePath(`${CUENTAS}/${id}/editar`);
+  revalidatePath(TABLERO);
+  revalidatePath(TESORERIA_TX);
+  revalidatePath(TESORERIA_UBI);
   return { success: true, message: "Cambios guardados." };
 }
 
@@ -166,20 +199,31 @@ export async function archiveBankAccount(id: string): Promise<ActionState> {
   }
   const ex = await prisma.bankAccount.findFirst({
     where: { id, organizationId: org.ctx.organizationId, deletedAt: null },
+    select: { id: true, treasuryLocationId: true },
   });
   if (!ex) {
     return { success: false, error: "Cuenta no encontrada o ya archivada." };
   }
+  const now = new Date();
   try {
-    await prisma.bankAccount.update({
-      where: { id: ex.id },
-      data: { deletedAt: new Date() },
-    });
+    await prisma.$transaction([
+      prisma.bankAccount.update({
+        where: { id: ex.id },
+        data: { deletedAt: now, isActive: false },
+      }),
+      prisma.treasuryLocation.update({
+        where: { id: ex.treasuryLocationId },
+        data: { deletedAt: now, isActive: false },
+      }),
+    ]);
   } catch (e) {
     return { success: false, error: mapPrismaToMessage(e) };
   }
   revalidatePath(CUENTAS);
   revalidatePath(DEPO);
+  revalidatePath(TESORERIA_UBI);
+  revalidatePath(TESORERIA_TX);
+  revalidatePath(TABLERO);
   return { success: true, message: "Cuenta archivada." };
 }
 
@@ -252,6 +296,9 @@ export async function createBankDeposit(
   }
   revalidatePath(DEPO);
   revalidatePath(CUENTAS);
+  revalidatePath(TABLERO);
+  revalidatePath(TESORERIA_TX);
+  revalidatePath(TESORERIA_UBI);
   redirect(`${DEPO}/${dep.id}`);
 }
 
@@ -320,6 +367,9 @@ export async function updateBankDeposit(
   revalidatePath(CUENTAS);
   revalidatePath(`${DEPO}/${id}`);
   revalidatePath(`${DEPO}/${id}/editar`);
+  revalidatePath(TABLERO);
+  revalidatePath(TESORERIA_TX);
+  revalidatePath(TESORERIA_UBI);
   return { success: true, message: "Depósito actualizado." };
 }
 
@@ -346,6 +396,9 @@ export async function archiveBankDeposit(id: string): Promise<ActionState> {
   }
   revalidatePath(DEPO);
   revalidatePath(CUENTAS);
+  revalidatePath(TABLERO);
+  revalidatePath(TESORERIA_TX);
+  revalidatePath(TESORERIA_UBI);
   return { success: true, message: "Depósito archivado." };
 }
 
@@ -448,6 +501,9 @@ export async function createBankTransfer(
   }
   revalidatePath(TRANS);
   revalidatePath(CUENTAS);
+  revalidatePath(TABLERO);
+  revalidatePath(TESORERIA_TX);
+  revalidatePath(TESORERIA_UBI);
   redirect(`${TRANS}/${xfer.id}`);
 }
 
@@ -519,6 +575,9 @@ export async function updateBankTransfer(
   revalidatePath(CUENTAS);
   revalidatePath(`${TRANS}/${id}`);
   revalidatePath(`${TRANS}/${id}/editar`);
+  revalidatePath(TABLERO);
+  revalidatePath(TESORERIA_TX);
+  revalidatePath(TESORERIA_UBI);
   return { success: true, message: "Transferencia actualizada." };
 }
 
@@ -545,5 +604,8 @@ export async function archiveBankTransfer(id: string): Promise<ActionState> {
   }
   revalidatePath(TRANS);
   revalidatePath(CUENTAS);
+  revalidatePath(TABLERO);
+  revalidatePath(TESORERIA_TX);
+  revalidatePath(TESORERIA_UBI);
   return { success: true, message: "Transferencia archivada." };
 }

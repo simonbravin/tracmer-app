@@ -14,8 +14,11 @@ import {
 } from "@/components/ui/table";
 import type { CurrencyCode } from "@prisma/client";
 
+import { formatMoney } from "@/lib/sales/format";
+
 export type BankAccountListRow = {
   id: string;
+  treasuryLocationId: string;
   name: string;
   bankName: string;
   currencyCode: CurrencyCode;
@@ -23,6 +26,8 @@ export type BankAccountListRow = {
   isActive: boolean;
   deletedAt: Date | null;
   _count: { deposits: number };
+  /** Depósitos + transferencias netas (misma moneda que la cuenta). */
+  balanceAmount: { toString(): string };
 };
 
 type SearchP = { q?: string; vista?: string };
@@ -70,6 +75,7 @@ export function BankAccountsTable({
                 <TableHead className="hidden sm:table-cell">Banco</TableHead>
                 <TableHead>Moneda</TableHead>
                 <TableHead className="hidden md:table-cell">Referencia</TableHead>
+                <TableHead className="text-right">Saldo</TableHead>
                 <TableHead className="text-right">Depósitos</TableHead>
                 <TableHead>Estado</TableHead>
                 <TableHead className="w-20 text-right" />
@@ -96,6 +102,9 @@ export function BankAccountsTable({
                       {a.accountIdentifierMasked}
                     </TableCell>
                     <TableCell className="text-right tabular-nums text-sm">
+                      {formatMoney(a.balanceAmount, a.currencyCode)}
+                    </TableCell>
+                    <TableCell className="text-right tabular-nums text-sm">
                       {a._count.deposits}
                     </TableCell>
                     <TableCell>
@@ -107,7 +116,12 @@ export function BankAccountsTable({
                         <Badge variant="secondary">Inactiva</Badge>
                       )}
                     </TableCell>
-                    <TableCell className="text-right">
+                    <TableCell className="text-right space-x-1">
+                      <Button asChild size="sm" variant="ghost">
+                        <Link href={`/tesoreria/transacciones?vista=efectivo&ubicacion=${a.treasuryLocationId}`}>
+                          Mov.
+                        </Link>
+                      </Button>
                       <Button asChild size="sm" variant="ghost">
                         <Link href={`/bancos/cuentas/${a.id}`}>Ver</Link>
                       </Button>

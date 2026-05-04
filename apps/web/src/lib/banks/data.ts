@@ -1,8 +1,57 @@
 import "server-only";
 
 import type { CurrencyCode } from "@prisma/client";
+import { Prisma } from "@prisma/client";
 import { prisma } from "@tracmer-app/database";
 import type { Prisma as P } from "@prisma/client";
+
+const dec0 = () => new Prisma.Decimal(0);
+
+/**
+ * Saldo operativo por cuenta: depósitos (no archivados) + transferencias entrantes
+ * − (monto saliente + comisión debitada del origen, si aplica).
+ */
+/** Exportado para tesorería (saldos por cuenta bancaria). */
+export async function bankAccountBalancesForIds(organizationId: string, accountIds: string[]): Promise<Map<string, Prisma.Decimal>> {
+  const out = new Map<string, Prisma.Decimal>();
+  for (const id of accountIds) {
+    out.set(id, dec0());
+  }
+  if (accountIds.length === 0) {
+    return out;
+  }
+  const xferBase: P.BankTransferWhereInput = { organizationId, deletedAt: null };
+  const [depositGroups, xferIn, xferOut] = await Promise.all([
+    prisma.bankDeposit.groupBy({
+      by: ["bankAccountId"],
+      where: { organizationId, deletedAt: null, bankAccountId: { in: accountIds } },
+      _sum: { amount: true },
+    }),
+    prisma.bankTransfer.groupBy({
+      by: ["toBankAccountId"],
+      where: { ...xferBase, toBankAccountId: { in: accountIds } },
+      _sum: { amount: true },
+    }),
+    prisma.bankTransfer.groupBy({
+      by: ["fromBankAccountId"],
+      where: { ...xferBase, fromBankAccountId: { in: accountIds } },
+      _sum: { amount: true, feeAmount: true },
+    }),
+  ]);
+  for (const row of depositGroups) {
+    const add = row._sum.amount ?? dec0();
+    out.set(row.bankAccountId, (out.get(row.bankAccountId) ?? dec0()).add(add));
+  }
+  for (const row of xferIn) {
+    const add = row._sum.amount ?? dec0();
+    out.set(row.toBankAccountId, (out.get(row.toBankAccountId) ?? dec0()).add(add));
+  }
+  for (const row of xferOut) {
+    const debit = (row._sum.amount ?? dec0()).add(row._sum.feeAmount ?? dec0());
+    out.set(row.fromBankAccountId, (out.get(row.fromBankAccountId) ?? dec0()).sub(debit));
+  }
+  return out;
+}
 
 export function parseBankDate(ymd: string): Date {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(ymd)) {
@@ -31,7 +80,7 @@ export async function listBankAccounts(organizationId: string, o: ListBankAccoun
     ];
   }
   const { page, pageSize } = o;
-  const [items, total] = await Promise.all([
+  const [rows, total] = await Promise.all([
     prisma.bankAccount.findMany({
       where,
       orderBy: { updatedAt: "desc" },
@@ -47,18 +96,30 @@ export async function listBankAccounts(organizationId: string, o: ListBankAccoun
         deletedAt: true,
         createdAt: true,
         updatedAt: true,
+        treasuryLocationId: true,
         _count: { select: { deposits: true } },
       },
     }),
     prisma.bankAccount.count({ where }),
   ]);
+  const balances = await bankAccountBalancesForIds(
+    organizationId,
+    rows.map((r) => r.id),
+  );
+  const items = rows.map((r) => ({
+    ...r,
+    balanceAmount: balances.get(r.id) ?? dec0(),
+  }));
   return { items, total, page, pageSize };
 }
 
 export async function getBankAccountById(organizationId: string, id: string) {
   return prisma.bankAccount.findFirst({
     where: { id, organizationId },
-    include: { _count: { select: { deposits: true } } },
+    include: {
+      _count: { select: { deposits: true } },
+      treasuryLocation: { select: { id: true, kind: true, displayName: true } },
+    },
   });
 }
 

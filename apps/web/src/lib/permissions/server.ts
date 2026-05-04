@@ -3,7 +3,7 @@ import "server-only";
 import { prisma } from "@tracmer-app/database";
 
 import { parsePermissionKey, type AppModuleCode } from "./catalog";
-import { ensurePermissionCatalog, seedOrganizationPermissionMatrixIfEmpty } from "./seed";
+import { ensurePermissionCatalog, seedOrganizationPermissionMatrixIfEmpty, syncTreasuryPermissionsFromBanks } from "./seed";
 
 export class PermissionDenied extends Error {
   override readonly name = "PermissionDenied";
@@ -19,6 +19,7 @@ export function isPermissionDenied(e: unknown): e is PermissionDenied {
 async function ensureBootstrap(organizationId: string) {
   await ensurePermissionCatalog();
   await seedOrganizationPermissionMatrixIfEmpty(organizationId);
+  await syncTreasuryPermissionsFromBanks(organizationId);
 }
 
 /**

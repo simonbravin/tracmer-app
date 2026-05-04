@@ -55,6 +55,21 @@ export async function createOwnerOrganizationForUser(
       },
     });
     await seedOrganizationPermissionMatrixIfEmpty(org.id, tx);
+    await tx.glAccount.upsert({
+      where: {
+        organizationId_code: {
+          organizationId: org.id,
+          code: "0-UNCLASS",
+        },
+      },
+      create: {
+        organizationId: org.id,
+        code: "0-UNCLASS",
+        name: "Sin clasificar",
+        statementRole: "memo",
+      },
+      update: {},
+    });
     await tx.membership.create({
       data: {
         organizationId: org.id,

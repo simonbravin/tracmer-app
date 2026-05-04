@@ -13,6 +13,8 @@ import {
   FileText,
   Landmark,
   LayoutDashboard,
+  ListOrdered,
+  MapPin,
   PiggyBank,
   Scale,
   Shield,
@@ -46,6 +48,13 @@ export const appNavigation: NavSection[] = [
     links: [
       { title: "Ventas", href: "/operaciones/ventas", icon: FileText },
       { title: "Cobranzas", href: "/operaciones/cobranzas", icon: Banknote },
+    ],
+  },
+  {
+    title: "Tesorería",
+    links: [
+      { title: "Transacciones", href: "/tesoreria/transacciones", icon: ListOrdered },
+      { title: "Ubicaciones", href: "/tesoreria/ubicaciones", icon: MapPin },
     ],
   },
   {

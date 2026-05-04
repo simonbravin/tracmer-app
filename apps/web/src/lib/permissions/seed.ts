@@ -50,6 +50,91 @@ function defaultPermissionAllowed(roleCode: string, moduleCode: string, actionCo
 }
 
 /**
+ * Sincroniza módulo `treasury` y permisos con los de `banks` por cada rol con membresía activa en la org.
+ * Idempotente en datos: upsert por (org, rol, definición); debe ejecutarse cuando cambian permisos de bancos
+ * para que tesorería siga el mismo criterio de acceso.
+ */
+export async function syncTreasuryPermissionsFromBanks(organizationId: string, db: Tx | typeof prisma = prisma) {
+  const [banksMod, treasuryMod] = await Promise.all([
+    db.appModule.findUnique({ where: { code: "banks" } }),
+    db.appModule.findUnique({ where: { code: "treasury" } }),
+  ]);
+  if (!banksMod || !treasuryMod) return;
+
+  const roleIds = await db.membership.findMany({
+    where: { organizationId, deletedAt: null },
+    select: { roleId: true },
+    distinct: ["roleId"],
+  });
+
+  const treasuryDefs = await db.permissionDefinition.findMany({
+    where: { moduleId: treasuryMod.id },
+  });
+  if (treasuryDefs.length === 0) return;
+
+  const treasuryByAction = new Map(treasuryDefs.map((d) => [d.actionCode, d.id]));
+
+  for (const { roleId } of roleIds) {
+    const bankEnabled = await db.organizationRoleEnabledModule.findUnique({
+      where: {
+        organizationId_roleId_moduleId: {
+          organizationId,
+          roleId,
+          moduleId: banksMod.id,
+        },
+      },
+    });
+    await db.organizationRoleEnabledModule.upsert({
+      where: {
+        organizationId_roleId_moduleId: {
+          organizationId,
+          roleId,
+          moduleId: treasuryMod.id,
+        },
+      },
+      create: {
+        organizationId,
+        roleId,
+        moduleId: treasuryMod.id,
+        isEnabled: bankEnabled?.isEnabled ?? true,
+      },
+      update: { isEnabled: bankEnabled?.isEnabled ?? true },
+    });
+
+    const bankDefs = await db.permissionDefinition.findMany({ where: { moduleId: banksMod.id } });
+    for (const bd of bankDefs) {
+      const treasuryDefId = treasuryByAction.get(bd.actionCode);
+      if (!treasuryDefId) continue;
+      const bankPerm = await db.organizationRolePermission.findUnique({
+        where: {
+          organizationId_roleId_permissionDefinitionId: {
+            organizationId,
+            roleId,
+            permissionDefinitionId: bd.id,
+          },
+        },
+      });
+      await db.organizationRolePermission.upsert({
+        where: {
+          organizationId_roleId_permissionDefinitionId: {
+            organizationId,
+            roleId,
+            permissionDefinitionId: treasuryDefId,
+          },
+        },
+        create: {
+          organizationId,
+          roleId,
+          permissionDefinitionId: treasuryDefId,
+          isAllowed: bankPerm?.isAllowed ?? true,
+        },
+        update: { isAllowed: bankPerm?.isAllowed ?? true },
+      });
+    }
+  }
+}
+
+/**
  * Matriz por organización y rol. Solo se ejecuta cuando la org no tiene filas aún
  * (evita pisar cambios del panel de permisos).
  */

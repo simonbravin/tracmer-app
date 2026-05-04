@@ -74,6 +74,7 @@ Este documento define reglas de negocio **determinísticas**. Donde algo no est�
 | Depósito → Cobranzas | **N:M** por la misma vía. No se asume relación directa venta–depósito. |
 | Transferencia → Venta / Cobranza | **Ninguna.** No afecta ventas ni cobranzas directamente. |
 | Cliente → Ventas | **1:N** típico. |
+| Ubicación de fondos (`treasury_locations`) | **Catálogo** de dónde puede estar el dinero (banco vinculado 1:1 a `bank_accounts`, caja, billetera). Los montos siguen siendo canónicos en cobranzas, depósitos, transferencias y `treasury_manual_movements`; la ubicación no duplica saldos. **PENDIENTE** reglas finas de conciliación cobranza ↔ ubicación no bancaria. |
 
 **Invariante global:** toda entidad de negocio persistida lleva `organization_id` (o hereda de padre que lo lleva) y todas las consultas/mutaciones aplican aislamiento por organización en backend.
 

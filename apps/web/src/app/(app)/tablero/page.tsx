@@ -5,6 +5,7 @@ import { PageHeader } from "@/components/common/page-header";
 import { DashboardCharts } from "@/components/dashboard/dashboard-charts";
 import { DashboardFilters } from "@/components/dashboard/dashboard-filters";
 import { DashboardKpis } from "@/components/dashboard/dashboard-kpis";
+import { DashboardTreasury } from "@/components/dashboard/dashboard-treasury";
 import {
   DashboardAlertsHeaderAction,
   DashboardAlertsProvider,
@@ -117,6 +118,8 @@ export default async function TableroPage({ searchParams }: PageProps) {
         <Separator />
         <DashboardKpis data={data.kpis} />
       </div>
+
+      <DashboardTreasury data={data.treasury} />
 
       <div className="space-y-3">
         <h2 className="text-sm font-medium uppercase text-muted-foreground">Gráficos</h2>

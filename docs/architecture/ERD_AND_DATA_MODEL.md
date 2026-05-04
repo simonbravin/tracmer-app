@@ -212,8 +212,50 @@ erDiagram
 | Aspecto | Definición |
 |---------|------------|
 | **Propósito** | Cuenta bancaria de la empresa en la org. |
-| **Campos** | `id`, `organization_id`, `name`, `bank_name`, `currency_code` (`ARS` \| `USD`), `account_identifier_masked`, `is_active`, `created_at`, `updated_at`, `deleted_at`. |
-| **Relaciones** | 1:N `bank_deposits` (destino), `bank_transfers` (origen/destino). |
+| **Campos** | `id`, `organization_id`, **`treasury_location_id` FK** (1:1 con `treasury_locations` de tipo `bank`), `name`, `bank_name`, `currency_code` (`ARS` \| `USD`), `account_identifier_masked`, `is_active`, `created_at`, `updated_at`, `deleted_at`. |
+| **Relaciones** | N:1 `treasury_locations`; 1:N `bank_deposits` (destino), `bank_transfers` (origen/destino). |
+| **Saldo listado (app)** | Derivado, no persistido: `SUM(bank_deposits.amount)` destino + `SUM(bank_transfers.amount)` como destino − `SUM(bank_transfers.amount + COALESCE(fee_amount,0))` como origen; solo filas con `deleted_at` NULL. Coherente con transferencias en misma moneda (validación app). |
+
+---
+
+### 2.13.1 treasury_locations
+
+| Aspecto | Definición |
+|---------|------------|
+| **Propósito** | Ubicación de fondos de la org: banco (1:1 con cuenta bancaria), caja física, billetera electrónica (MP, etc.). Base para “dónde está la plata” y feed de transacciones. |
+| **Campos** | `id`, `organization_id`, `kind` (`bank` \| `cash` \| `electronic_wallet`), `display_name`, `currency_code`, `provider_code` opcional (p.ej. proveedor), `is_active`, `created_at`, `updated_at`, `deleted_at`. |
+| **Relaciones** | 1:1 opcional `bank_accounts` (solo si `kind = bank`); 1:N `treasury_manual_movements`. |
+| **Feed transacciones (app)** | Vista **efectivo**: depósitos, transferencias (y movimientos manuales en ubicaciones no banco). Vista **operativo**: cobranzas brutas y `collection_fees` — sin doble contar con efectivo hasta que exista vínculo explícito en producto. |
+
+---
+
+### 2.13.2 gl_accounts
+
+| Aspecto | Definición |
+|---------|------------|
+| **Propósito** | Plan de cuentas mínimo por org para clasificación y reportes contables futuros (estado de situación, resultados). |
+| **Campos** | `id`, `organization_id`, `code` **UNIQUE** por org, `name`, `statement_role` (`asset` \| `liability` \| `equity` \| `revenue` \| `expense` \| `memo`), `parent_id` nullable (jerarquía), `is_active`, `created_at`, `updated_at`, `deleted_at`. |
+| **Relaciones** | 1:N `ledger_classifications`; auto-referencia `parent_id`. |
+
+---
+
+### 2.13.3 ledger_classifications
+
+| Aspecto | Definición |
+|---------|------------|
+| **Propósito** | Enlace de una entidad de negocio existente a una cuenta del plan **sin** duplicar montos. |
+| **Campos** | `id`, `organization_id`, `entity_type` (enum alineado a tablas: `collection`, `collection_fee`, `bank_deposit`, `bank_transfer`, `sale`, `treasury_manual_movement`), `entity_id`, `gl_account_id`, `source` (`auto` \| `user`), `assigned_at`, `assigned_by_user_id`, `deleted_at`. |
+| **Relaciones** | N:1 `organizations`, `gl_accounts`; opcional `users` (asignador). |
+
+---
+
+### 2.13.4 treasury_manual_movements
+
+| Aspecto | Definición |
+|---------|------------|
+| **Propósito** | Ingreso/egreso manual en una ubicación que **no** pasa por cobranza ni depósito bancario (caja, MP). |
+| **Campos** | `id`, `organization_id`, `treasury_location_id`, `movement_date` (date), `amount` **NUMERIC**, `currency_code`, `direction` (`inflow` \| `outflow`), `memo`, `created_at`, `updated_at`, `deleted_at`, `created_by_user_id`. |
+| **Relaciones** | N:1 `treasury_locations`. |
 
 ---
 
